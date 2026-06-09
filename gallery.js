@@ -113,14 +113,19 @@ function closeModal() {
     }
 }
 
-// scrolls, integer-wise only (preserves pixels)
 function handleWheelZoom(e) {
     if (!modal || modal.style.display !== "flex") return;
 
     e.preventDefault();
+    e.stopPropagation();
 
     const delta = e.deltaY > 0 ? -1 : 1;
-    const newZoom = currentZoom + delta;
+    let newZoom = currentZoom + delta;
+
+    if (newZoom < 1) newZoom = 1;
+    if (newZoom > 4) newZoom = 4;
+
+    console.log(`Scroll: deltaY=${e.deltaY}, delta=${delta}, newZoom=${newZoom}`); // Debug
 
     setZoom(newZoom);
 }
