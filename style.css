@@ -41,4 +41,11 @@ header h1 {
     color: #888888;
     margin-top: 1.5rem;
     letter-spacing: 1px;
+
+    word-wrap: break-word;
+    word-break: break-all;
+
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
 }
