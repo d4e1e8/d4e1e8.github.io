@@ -64,10 +64,8 @@ const modal = document.getElementById("art-modal");
 const modalImg = document.getElementById("modal-img");
 const closeBtn = document.querySelector(".close-modal");
 
-let currentZoom = 100;  // Zoom percentage (100 = 100%)
-let isZooming = false;
+let currentZoom = 1;
 
-// Create zoom display element
 const zoomDisplay = document.createElement('div');
 zoomDisplay.style.cssText = `
 position: fixed;
@@ -82,29 +80,21 @@ border-radius: 4px;
 z-index: 1002;
 pointer-events: none;
 `;
-zoomDisplay.textContent = '100%';
+zoomDisplay.textContent = '100% (1x)';
 document.body.appendChild(zoomDisplay);
 
-function snapZoom(percentage) {
-    return Math.round(percentage / 10) * 10;
-}
-
-function setZoom(percentage) {
-    const snapped = snapZoom(percentage);
-
-    const clamped = Math.min(500, Math.max(10, snapped));
-
+function setZoom(level) {
+    const clamped = Math.min(4, Math.max(1, level));
     currentZoom = clamped;
-    modalImg.style.transform = `scale(${clamped / 100})`;
-    modalImg.style.transition = 'transform 0.1s ease-out';
-    zoomDisplay.textContent = `${clamped}%`;
 
-    if (clamped !== percentage) {
-        zoomDisplay.style.color = '#ffffff';
-        setTimeout(() => {
-            zoomDisplay.style.color = '#888888';
-        }, 150);
-    }
+    modalImg.style.transform = `scale(${clamped})`;
+    modalImg.style.imageRendering = 'pixelated';
+    zoomDisplay.textContent = `${clamped * 100}% (${clamped}x)`;
+
+    zoomDisplay.style.color = '#ffffff';
+    setTimeout(() => {
+        zoomDisplay.style.color = '#888888';
+    }, 150);
 }
 
 function openModal(imgSrc, imgAlt) {
@@ -112,23 +102,24 @@ function openModal(imgSrc, imgAlt) {
         modal.style.display = "flex";
         modalImg.src = imgSrc;
         modalImg.alt = imgAlt;
-        setZoom(100);
+        setZoom(1);
     }
 }
 
 function closeModal() {
     if (modal) {
         modal.style.display = "none";
-        setZoom(100);
+        setZoom(1);
     }
 }
 
+// scrolls, integer-wise only (preserves pixels)
 function handleWheelZoom(e) {
     if (!modal || modal.style.display !== "flex") return;
 
     e.preventDefault();
 
-    const delta = e.deltaY > 0 ? -10 : 10;
+    const delta = e.deltaY > 0 ? -1 : 1;
     const newZoom = currentZoom + delta;
 
     setZoom(newZoom);
@@ -136,27 +127,10 @@ function handleWheelZoom(e) {
 
 modal.addEventListener('wheel', handleWheelZoom, { passive: false });
 
-function addImageClickHandlers() {
-    document.querySelectorAll(".art-card img").forEach(img => {
-        img.removeEventListener('click', img.clickHandler);
-        img.clickHandler = function() {
-            openModal(this.src, this.alt);
-        };
-        img.addEventListener('click', img.clickHandler);
-    });
-}
-
-addImageClickHandlers();
-
-if (closeBtn) {
-    closeBtn.addEventListener("click", closeModal);
-}
-
-if (modal) {
-    modal.addEventListener("click", function(e) {
-        if (e.target === modal) {
-            closeModal();
-        }
+if (modalImg) {
+    modalImg.addEventListener('dblclick', function(e) {
+        e.stopPropagation();
+        setZoom(1);
     });
 }
 
@@ -164,14 +138,7 @@ document.addEventListener("keydown", function(e) {
     if (e.key === "Escape" && modal && modal.style.display === "flex") {
         closeModal();
     }
-    if (e.key === "r" && modal && modal.style.display === "flex") {
-        setZoom(100);
+    if ((e.key === "r" || e.key === "R") && modal && modal.style.display === "flex") {
+        setZoom(1);
     }
 });
-
-if (modalImg) {
-    modalImg.addEventListener('dblclick', function(e) {
-        e.stopPropagation();
-        setZoom(100);
-    });
-}
