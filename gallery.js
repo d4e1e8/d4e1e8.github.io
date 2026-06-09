@@ -36,6 +36,7 @@ const artworks = [
     { filename: "Untitled-works0..7.png", title: "Untitled-works0..7" }
 ];
 
+// gallery generations
 const gallery = document.getElementById('gallery');
 
 if (gallery) {
@@ -58,23 +59,82 @@ if (gallery) {
     });
 }
 
+// modal w& zooming, snaps
 const modal = document.getElementById("art-modal");
 const modalImg = document.getElementById("modal-img");
 const closeBtn = document.querySelector(".close-modal");
+
+let currentZoom = 100;  // Zoom percentage (100 = 100%)
+let isZooming = false;
+
+// Create zoom display element
+const zoomDisplay = document.createElement('div');
+zoomDisplay.style.cssText = `
+position: fixed;
+bottom: 2rem;
+left: 2rem;
+color: #888888;
+font-family: monospace;
+font-size: 0.9rem;
+background: rgba(0,0,0,0.7);
+padding: 0.5rem 1rem;
+border-radius: 4px;
+z-index: 1002;
+pointer-events: none;
+`;
+zoomDisplay.textContent = '100%';
+document.body.appendChild(zoomDisplay);
+
+function snapZoom(percentage) {
+    return Math.round(percentage / 10) * 10;
+}
+
+function setZoom(percentage) {
+    const snapped = snapZoom(percentage);
+
+    const clamped = Math.min(500, Math.max(10, snapped));
+
+    currentZoom = clamped;
+    modalImg.style.transform = `scale(${clamped / 100})`;
+    modalImg.style.transition = 'transform 0.1s ease-out';
+    zoomDisplay.textContent = `${clamped}%`;
+
+    if (clamped !== percentage) {
+        zoomDisplay.style.color = '#ffffff';
+        setTimeout(() => {
+            zoomDisplay.style.color = '#888888';
+        }, 150);
+    }
+}
 
 function openModal(imgSrc, imgAlt) {
     if (modal && modalImg) {
         modal.style.display = "flex";
         modalImg.src = imgSrc;
         modalImg.alt = imgAlt;
+        setZoom(100);
     }
 }
 
 function closeModal() {
     if (modal) {
         modal.style.display = "none";
+        setZoom(100);
     }
 }
+
+function handleWheelZoom(e) {
+    if (!modal || modal.style.display !== "flex") return;
+
+    e.preventDefault();
+
+    const delta = e.deltaY > 0 ? -10 : 10;
+    const newZoom = currentZoom + delta;
+
+    setZoom(newZoom);
+}
+
+modal.addEventListener('wheel', handleWheelZoom, { passive: false });
 
 function addImageClickHandlers() {
     document.querySelectorAll(".art-card img").forEach(img => {
@@ -104,16 +164,14 @@ document.addEventListener("keydown", function(e) {
     if (e.key === "Escape" && modal && modal.style.display === "flex") {
         closeModal();
     }
+    if (e.key === "r" && modal && modal.style.display === "flex") {
+        setZoom(100);
+    }
 });
 
-const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.type === 'childList') {
-            addImageClickHandlers();
-        }
+if (modalImg) {
+    modalImg.addEventListener('dblclick', function(e) {
+        e.stopPropagation();
+        setZoom(100);
     });
-});
-
-if (gallery) {
-    observer.observe(gallery, { childList: true, subtree: true });
 }
