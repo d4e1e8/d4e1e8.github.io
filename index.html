@@ -126,5 +126,29 @@
 
       #-->
     </main>
+
+    <div id="art-modal" class="modal">
+      <span class="close-modal">[x]</span>
+      <img class="modal-content" id="modal-img" alt="Zoomed View">
+    </div>
+
+    <script>
+      const modal = document.getElementById("art-modal");
+      const modalImg = document.getElementById("modal-img");
+
+      document.querySelectorAll(".art-card img").forEach(img => {
+        img.onclick = function() {
+          modal.style.display = "flex";
+          modalImg.src = this.src;
+        }
+      });
+
+      modal.onclick = function(e) {
+        if (e.target === modal || e.target.classList.contains("close-modal")) {
+          modal.style.display = "none";
+        }
+      }
+    </script>
+
   </body>
 </html>
