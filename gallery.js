@@ -14,9 +14,11 @@ const artworks = [
     { filename: "Untitled-0b0000xfif2.jpg", title: "Untitled-0b0000xfif2" },
     { filename: "Untitled-nothing000002.jpg", title: "Untitled-nothing000002" },
     { filename: "Untitled-wellnessDocumented;NowEffloresceIntoBlithesome024.jpg", title: "Untitled-wellnessDocumented;NowEffloresceIntoBlithesome024" },
+    { filename: "Untitled-dayAndAfter00.jpg", title: "Untitled-dayAndAfter00" },
     { filename: "Untitled-dayAndAfter99.jpg", title: "Untitled-dayAndAfter99" },
     { filename: "Untitled-microThermalIncisionPlasteringSubcorticalDeformingAstralColumnGalvanizingConclusiveExampleSubject001.jpg", title: "Untitled-microThermalIncisionPlasteringSubcorticalDeformingAstralColumnGalvanizingConclusiveExampleSubject001" },
     { filename: "Untitled-forEveryWord001.jpg", title: "Untitled-forEveryWord001" },
+    { filename: "Untitled-andThenLooking_cerebralExtension(synapticReconfiguration_decompartmentalizing).jpg", title: "Untitled-andThenLooking_cerebralExtension(synapticReconfiguration_decompartmentalizing)" },
     { filename: "Untitled-everyoneNeedsToBe02.jpg", title: "Untitled-everyoneNeedsToBe02" },
     { filename: "Untitled-friends_92.jpg", title: "Untitled-friends_92" },
     { filename: "Untitled-IHTL2.png", title: "Untitled-IHTL2" },
@@ -24,7 +26,14 @@ const artworks = [
     { filename: "Untitled-enterIDWTEA9902x3.jpg", title: "Untitled-enterIDWTEA9902x3" },
     { filename: "Untitled-watchAsBC6.png", title: "Untitled-watchAsBC6" },
     { filename: "Untitled-alwaysAnd092.png", title: "Untitled-alwaysAnd092" },
-    { filename: "Untitled-faces;perturbedFigurePulling.jpg", title: "Untitled-faces;perturbedFigurePulling" }
+    { filename: "Untitled-faces;perturbedFigurePulling.jpg", title: "Untitled-faces;perturbedFigurePulling" },
+    { filename: "Untitled-allThatSeaFor10000679.png", title: "Untitled-allThatSeaFor10000679" },
+    { filename: "Untitled-coreMemory002.png", title: "Untitled-coreMemory002" },
+    { filename: "Untitled-LacerationAndNeighbors.png", title: "Untitled-LacerationAndNeighbors" },
+    { filename: "Untitled-phaseB01.png", title: "Untitled-phaseB01" },
+    { filename: "Untitled-treatB.19.2075.png", title: "Untitled-treatB.19.2075" },
+    { filename: "Untitled-viewFrom1.png", title: "Untitled-viewFrom1" },
+    { filename: "Untitled-works0..7.png", title: "Untitled-works0..7" }
 ];
 
 const gallery = document.getElementById('gallery');
