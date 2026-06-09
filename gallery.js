@@ -36,7 +36,6 @@ const artworks = [
     { filename: "Untitled-works0..7.png", title: "Untitled-works0..7" }
 ];
 
-// gallery generations
 const gallery = document.getElementById('gallery');
 
 if (gallery) {
@@ -56,6 +55,16 @@ if (gallery) {
         article.appendChild(img);
         article.appendChild(title);
         gallery.appendChild(article);
+    });
+}
+
+function addImageClickHandlers() {
+    document.querySelectorAll(".art-card img").forEach(img => {
+        img.removeEventListener('click', img.clickHandler);
+        img.clickHandler = function() {
+            openModal(this.src, this.alt);
+        };
+        img.addEventListener('click', img.clickHandler);
     });
 }
 
@@ -84,7 +93,10 @@ zoomDisplay.textContent = '100% (1x)';
 document.body.appendChild(zoomDisplay);
 
 function setZoom(level) {
-    const clamped = Math.min(4, Math.max(1, level));
+    let clamped = Math.round(level);
+    if (clamped < 1) clamped = 1;
+    if (clamped > 4) clamped = 4;
+
     currentZoom = clamped;
 
     modalImg.style.transform = `scale(${clamped})`;
@@ -125,8 +137,6 @@ function handleWheelZoom(e) {
     if (newZoom < 1) newZoom = 1;
     if (newZoom > 4) newZoom = 4;
 
-    console.log(`Scroll: deltaY=${e.deltaY}, delta=${delta}, newZoom=${newZoom}`); // Debug
-
     setZoom(newZoom);
 }
 
@@ -139,6 +149,16 @@ if (modalImg) {
     });
 }
 
+if (closeBtn) {
+    closeBtn.addEventListener('click', closeModal);
+}
+
+if (modal) {
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+}
+
 document.addEventListener("keydown", function(e) {
     if (e.key === "Escape" && modal && modal.style.display === "flex") {
         closeModal();
@@ -147,3 +167,5 @@ document.addEventListener("keydown", function(e) {
         setZoom(1);
     }
 });
+
+addImageClickHandlers();
