@@ -1,0 +1,44 @@
+body {
+    background-color: #121212;
+    color: #ffffff;
+    font-family: "Hack", "Fira Code", "JetBrains Mono", "DejaVu Sans Mono", monospace;
+    margin: 0;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    font-weight: normal;
+    margin-bottom: 5rem;
+    letter-spacing: 2px;
+}
+
+.gallery {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rem;
+    width: 100%;
+}
+
+.art-card img {
+    max-width: 800px;
+    width: 100%;
+    height: auto;
+
+    border: 4px solid #222;
+    background-color: #1a1a1a;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.art-title {
+    font-size: 1rem;
+    font-weight: normal;
+    color: #888888;
+    margin-top: 1.5rem;
+    letter-spacing: 1px;
+}
