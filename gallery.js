@@ -13,6 +13,7 @@ const artworks = [
 { filename: "Untitled-ok156X.png", title: "Untitled-ok156X" },
 { filename: "Untitled-plethoraOfTheSamePellucidExisting01.jpg", title: "Untitled-plethoraOfTheSamePellucidExisting01" },
 { filename: "Untitled-xyl-Tribute;perceptionalEndictionariliteral.jpg", title: "Untitled-xyl-Tribute;perceptionalEndictionariliteral" },
+{ filename: "Untitled-dissimilationTwiningToOrThenAndAlwaysThenMaybeSomedayToPossibleMomentsThenAlsoAfterNoBefore1.jpg", title: "Untitled-dissimilationTwiningToOrThenAndAlwaysThenMaybeSomedayToPossibleMomentsThenAlsoAfterNoBefore1" },
 { filename: "Untitled-0b0000xfif1.jpg", title: "Untitled-0b0000xfif1" },
 { filename: "Untitled-0b0000xfif2.jpg", title: "Untitled-0b0000xfif2" },
 { filename: "Untitled-nothing000002.jpg", title: "Untitled-nothing000002" },
