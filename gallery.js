@@ -68,12 +68,16 @@ function addImageClickHandlers() {
     });
 }
 
-// modal w& zooming, snaps
 const modal = document.getElementById("art-modal");
 const modalImg = document.getElementById("modal-img");
 const closeBtn = document.querySelector(".close-modal");
 
 let currentZoom = 1;
+
+let isDragging = false;
+let startX, startY;
+let translateX = 0;
+let translateY = 0;
 
 const zoomDisplay = document.createElement('div');
 zoomDisplay.style.cssText = `
@@ -92,6 +96,18 @@ pointer-events: none;
 zoomDisplay.textContent = '100% (1x)';
 document.body.appendChild(zoomDisplay);
 
+function disableScroll() {
+    document.body.style.overflow = 'hidden';
+}
+
+function enableScroll() {
+    document.body.style.overflow = '';
+}
+
+function updateTransform() {
+    modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+}
+
 function setZoom(level) {
     let clamped = Math.round(level);
     if (clamped < 1) clamped = 1;
@@ -99,7 +115,10 @@ function setZoom(level) {
 
     currentZoom = clamped;
 
-    modalImg.style.transform = `scale(${clamped})`;
+    translateX = 0;
+    translateY = 0;
+
+    updateTransform();
     modalImg.style.imageRendering = 'pixelated';
     zoomDisplay.textContent = `${clamped * 100}% (${clamped}x)`;
 
@@ -109,12 +128,62 @@ function setZoom(level) {
     }, 150);
 }
 
+function startDrag(e) {
+    if (currentZoom === 1) return;
+
+    e.preventDefault();
+    isDragging = true;
+
+    if (e.type === 'mousedown') {
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+    } else if (e.type === 'touchstart') {
+        startX = e.touches[0].clientX - translateX;
+        startY = e.touches[0].clientY - translateY;
+    }
+
+    modalImg.style.cursor = 'grabbing';
+    modalImg.style.transition = 'none';
+}
+
+function onDrag(e) {
+    if (!isDragging) return;
+
+    e.preventDefault();
+
+    let clientX, clientY;
+    if (e.type === 'mousemove') {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    } else if (e.type === 'touchmove') {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    }
+
+    translateX = clientX - startX;
+    translateY = clientY - startY;
+
+    updateTransform();
+}
+
+function stopDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    modalImg.style.cursor = currentZoom === 1 ? 'zoom-in' : 'grab';
+    modalImg.style.transition = 'transform 0.1s ease-out';
+}
+
 function openModal(imgSrc, imgAlt) {
     if (modal && modalImg) {
         modal.style.display = "flex";
         modalImg.src = imgSrc;
         modalImg.alt = imgAlt;
         setZoom(1);
+        disableScroll();
+
+        modalImg.style.cursor = 'zoom-in';
+        translateX = 0;
+        translateY = 0;
     }
 }
 
@@ -122,6 +191,9 @@ function closeModal() {
     if (modal) {
         modal.style.display = "none";
         setZoom(1);
+        enableScroll();
+        translateX = 0;
+        translateY = 0;
     }
 }
 
@@ -141,6 +213,14 @@ function handleWheelZoom(e) {
 }
 
 modal.addEventListener('wheel', handleWheelZoom, { passive: false });
+
+modalImg.addEventListener('mousedown', startDrag);
+window.addEventListener('mousemove', onDrag);
+window.addEventListener('mouseup', stopDrag);
+
+modalImg.addEventListener('touchstart', startDrag);
+window.addEventListener('touchmove', onDrag, { passive: false });
+window.addEventListener('touchend', stopDrag);
 
 if (modalImg) {
     modalImg.addEventListener('dblclick', function(e) {

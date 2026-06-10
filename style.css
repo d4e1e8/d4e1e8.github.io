@@ -84,6 +84,9 @@ header h1 {
 
     transform-origin: center center;
     transition: transform 0.1s ease-out;
+
+    cursor: grab;
+    user-select: none;
 }
 
 .modal-content[style*="scale(1)"] {
@@ -92,6 +95,10 @@ header h1 {
 
 .modal-content:not([style*="scale(1)"]) {
     cursor: zoom-out;
+}
+
+.modal-content:active {
+    cursor: grabbing;
 }
 
 .close-modal {
