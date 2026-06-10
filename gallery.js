@@ -7,6 +7,9 @@ if (dateSpan) {
 
 const artworks = [
     { filename: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous.png", title: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous" },
+    { filename: "Untitled-beats,NothingMakesItAnymore001.png", title: "Untitled-beats,NothingMakesItAnymore001" },
+    { filename: "Untitled-large001.png", title: "Untitled-large001" },
+    { filename: "Untitled-putativeUndulatingParticipable;leapK501.png", title: "Untitled-putativeUndulatingParticipable;leapK501"},
     { filename: "Untitled-ok156X.png", title: "Untitled-ok156X" },
     { filename: "Untitled-plethoraOfTheSamePellucidExisting01.jpg", title: "Untitled-plethoraOfTheSamePellucidExisting01" },
     { filename: "Untitled-xyl-Tribute;perceptionalEndictionariliteral.jpg", title: "Untitled-xyl-Tribute;perceptionalEndictionariliteral" },
