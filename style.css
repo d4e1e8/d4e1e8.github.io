@@ -112,6 +112,9 @@ header h1 {
     cursor: pointer;
     user-select: none;
     z-index: 1001;
+    padding: 12px;
+    min-width: 44px;
+    text-align: center;
 }
 
 .close-modal:hover {
@@ -147,7 +150,8 @@ header h1 {
 
     .close-modal {
         top: 1rem;
-        right: 1rem;
-        font-size: 1.2rem;
+        right: 0.5rem;
+        font-size: 1.5rem;
+        padding: 10px;
     }
 }
