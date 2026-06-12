@@ -11,13 +11,23 @@
       box-sizing: border-box;
     }
 
-    /* Fixed background dots layer (static while scrolling) */
-    body {
-      background: #181A1F;
-      position: relative;
-      min-height: 100vh;
+    /* Ensure html and body take full height and can scroll */
+    html, body {
+      height: 100%;
     }
 
+    body {
+      background: #181A1F;
+      color: #D0D5DB;
+      font-family: "Fira Code", "JetBrains Mono", "Hack", monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      padding: 2rem 2rem 4rem 2rem;
+      overflow-y: auto;  /* ensures scrolling works */
+      position: static;   /* removed relative */
+    }
+
+    /* Fixed background dots layer (static while scrolling) */
     .bg-dots {
       position: fixed;
       top: 0;
@@ -30,17 +40,10 @@
       z-index: 0;
     }
 
+    /* Content sits above dots */
     body > *:not(.bg-dots) {
       position: relative;
       z-index: 1;
-    }
-
-    body {
-      color: #D0D5DB;
-      font-family: "Fira Code", "JetBrains Mono", "Hack", monospace;
-      font-size: 1rem;
-      line-height: 1.5;
-      padding: 2rem 2rem 4rem 2rem;
     }
 
     header {
@@ -300,14 +303,12 @@
 
   <script>
     (function() {
-      // set current date
       const dateSpan = document.getElementById('date');
       if (dateSpan) {
         const today = new Date();
         dateSpan.textContent = `${today.getMonth()+1}.${today.getDate()}.${today.getFullYear().toString().slice(2)}`;
       }
 
-      // artworks list (unchanged)
       const artworks = [
         { filename: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous.png", title: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous" },
         { filename: "Untitled-beats,NothingMakesItAnymore001.png", title: "Untitled-beats,NothingMakesItAnymore001" },
@@ -343,7 +344,6 @@
         { filename: "Untitled-works0..7.png", title: "Untitled-works0..7" }
       ];
 
-      // render gallery
       const gallery = document.getElementById('gallery');
       if (gallery) {
         const frag = document.createDocumentFragment();
@@ -364,7 +364,6 @@
         gallery.appendChild(frag);
       }
 
-      // modal elements
       const modal = document.getElementById("art-modal");
       const modalImg = document.getElementById("modal-img");
       const closeBtn = document.getElementById("closeModalBtn");
@@ -376,14 +375,11 @@
       let isDragging = false;
       let startX = 0, startY = 0;
 
-      // create zoom bar + counter
       const zoomBar = document.createElement('div');
       zoomBar.className = 'zoom-control-bar';
-
       const counterSpan = document.createElement('span');
       counterSpan.className = 'counter';
       counterSpan.textContent = '[1/32]';
-
       const minusBtn = document.createElement('button');
       minusBtn.className = 'zoom-btn';
       minusBtn.textContent = '[-]';
@@ -393,7 +389,6 @@
       const plusBtn = document.createElement('button');
       plusBtn.className = 'zoom-btn';
       plusBtn.textContent = '[+]';
-
       zoomBar.appendChild(counterSpan);
       zoomBar.appendChild(minusBtn);
       zoomBar.appendChild(zoomVal);
@@ -423,19 +418,16 @@
       function updateModalForCurrentIndex() {
         const art = artworks[currentIndex];
         if (!art) return;
-        // show loading indicator
         modalInfo.textContent = '[loading...]';
         modalImg.style.opacity = '0.8';
         modalImg.src = `images/${art.filename}`;
         modalImg.alt = art.title;
-        // reset zoom and pan
         currentZoom = 1;
         translateX = 0;
         translateY = 0;
         updateTransform();
         zoomVal.textContent = '100% (1x)';
         modalImg.style.cursor = 'grab';
-        // update counter
         counterSpan.textContent = `[${currentIndex+1}/${artworks.length}]`;
       }
 
@@ -451,11 +443,13 @@
       function closeModal() {
         modal.style.display = "none";
         zoomBar.style.display = 'none';
-        document.body.style.overflow = '';
+        document.body.style.overflow = '';   // restore scrolling
         document.body.style.touchAction = '';
+        // force reflow to ensure body actually scrolls again
+        document.body.style.overflow = 'auto';
+        setTimeout(() => { document.body.style.overflow = ''; }, 10);
       }
 
-      // navigate next/prev
       function nextImage() {
         if (modal.style.display !== 'flex') return;
         currentIndex = (currentIndex + 1) % artworks.length;
@@ -468,7 +462,6 @@
         updateModalForCurrentIndex();
       }
 
-      // drag & pan (any zoom)
       function startDrag(e) {
         if (modal.style.display !== 'flex') return;
         e.preventDefault();
@@ -509,7 +502,6 @@
         setZoom(currentZoom + delta);
       }
 
-      // image load handler: show dimensions
       modalImg.addEventListener('load', () => {
         const w = modalImg.naturalWidth;
         const h = modalImg.naturalHeight;
@@ -522,7 +514,6 @@
         modalImg.style.opacity = '';
       });
 
-      // attach click handlers to gallery images
       function bindClicks() {
         document.querySelectorAll('.art-card img').forEach((img, idx) => {
           img.removeEventListener('click', img._handler);
@@ -531,7 +522,6 @@
         });
       }
 
-      // event binding
       minusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom - 1); });
       plusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom + 1); });
       closeBtn.addEventListener('click', closeModal);
@@ -556,7 +546,6 @@
 
       bindClicks();
 
-      // tiny flash for zoom indicator
       const style = document.createElement('style');
       style.textContent = `.zoom-flash { animation: pulse 0.12s ease-out; } @keyframes pulse { 0% { color: #fff; text-shadow: 0 0 3px #5DCCBA; } 100% { color: #BBDFD8; } }`;
       document.head.appendChild(style);
