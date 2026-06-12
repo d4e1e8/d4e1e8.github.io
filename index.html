@@ -11,37 +11,18 @@
       box-sizing: border-box;
     }
 
-    /* Fixed background dots layer (static while scrolling) */
     body {
       background: #181A1F;
-      position: relative;
-      min-height: 100vh;
-    }
-
-    .bg-dots {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
       background-image: radial-gradient(rgba(93, 204, 186, 0.12) 1px, transparent 1px);
       background-size: 32px 32px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Content layer sits above dots */
-    body > *:not(.bg-dots) {
-      position: relative;
-      z-index: 1;
-    }
-
-    body {
+      /* background static; imgs zoom past */
+      background-attachment: fixed;
       color: #D0D5DB;
       font-family: "Fira Code", "JetBrains Mono", "Hack", monospace;
       font-size: 1rem;
       line-height: 1.5;
       padding: 2rem 2rem 4rem 2rem;
+      min-height: 100vh;
     }
 
     header {
@@ -86,7 +67,7 @@
       text-align: center;
     }
 
-    /* PIXEL PERFECT: images keep native dimensions, never stretched */
+    /* PIXEL PERFECT, imgs native, no stretch */
     .art-card img {
       display: block;
       margin: 0 auto;
@@ -96,6 +77,7 @@
       cursor: zoom-in;
       transition: border 0.1s, box-shadow 0.1s;
 
+      /* pixel art rendering */
       image-rendering: crisp-edges;
       image-rendering: pixelated;
       -ms-interpolation-mode: nearest-neighbor;
@@ -181,6 +163,9 @@
       z-index: 10001;
       border-radius: 6px;
       letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;   /* verticle centering */
     }
 
     .close-modal:hover {
@@ -203,6 +188,8 @@
       border-radius: 8px;
       border: 1px solid #3E6B64;
       z-index: 10002;
+      /* center images */
+      align-items: center;
     }
 
     .zoom-btn {
@@ -237,6 +224,28 @@
       text-align: center;
     }
 
+    /* img counter in zoom bar */
+    .counter {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #A6B3C0;
+      background: transparent;
+      padding: 0 0.2rem;
+    }
+
+    /* display for aspect ratios */
+    .dimensions-display {
+      position: fixed;
+      bottom: 1.2rem;
+      right: 1.5rem;
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #8E9BA8;
+      z-index: 10001;          /* same as close button, but far enough away */
+      background: transparent;
+      pointer-events: none;    /* doesn’t block clicks */
+    }
+
     @media (max-width: 700px) {
       body { padding: 1rem 1rem 4rem 1rem; }
       .zoom-btn { padding: 0.2rem 0.8rem; min-width: 54px; font-size: 1rem; }
@@ -246,8 +255,6 @@
   </style>
 </head>
 <body>
-  <div class="bg-dots"></div>
-
   <header>
     <h1>canv</h1>
     <p class="sub-title">updated: <span id="date"></span></p>
@@ -262,14 +269,14 @@
 
   <script>
     (function() {
-      // set current date
+      // dates,
       const dateSpan = document.getElementById('date');
       if (dateSpan) {
         const today = new Date();
         dateSpan.textContent = `${today.getMonth()+1}.${today.getDate()}.${today.getFullYear().toString().slice(2)}`;
       }
 
-      // artworks list (exactly as you provided)
+      // drawings
       const artworks = [
         { filename: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous.png", title: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous" },
         { filename: "Untitled-beats,NothingMakesItAnymore001.png", title: "Untitled-beats,NothingMakesItAnymore001" },
@@ -305,16 +312,19 @@
         { filename: "Untitled-works0..7.png", title: "Untitled-works0..7" }
       ];
 
-      // render gallery
+      const TOTAL = artworks.length;
+
+      // render gallery and idx
       const gallery = document.getElementById('gallery');
       if (gallery) {
         const frag = document.createDocumentFragment();
-        for (const art of artworks) {
+        artworks.forEach((art, idx) => {
           const article = document.createElement('article');
           article.className = 'art-card';
           const img = document.createElement('img');
           img.src = `images/${art.filename}`;
           img.alt = art.title;
+          img.setAttribute('data-index', idx);
           img.loading = 'lazy';
           const title = document.createElement('h2');
           title.className = 'art-title';
@@ -322,38 +332,60 @@
           article.appendChild(img);
           article.appendChild(title);
           frag.appendChild(article);
-        }
+        });
         gallery.appendChild(frag);
       }
 
-      // modal elements
+      // modal elems
       const modal = document.getElementById("art-modal");
       const modalImg = document.getElementById("modal-img");
       const closeBtn = document.getElementById("closeModalBtn");
 
+      // pan&zoom state
       let currentZoom = 1;
       let translateX = 0, translateY = 0;
       let isDragging = false;
       let startX = 0, startY = 0;
 
-      // create zoom bar
+      // nav state
+      let currentArtIndex = 0;
+      let currentLoadedSrc = "";   // to avoid stale load events
+
+      // zoom bar
       const zoomBar = document.createElement('div');
       zoomBar.className = 'zoom-control-bar';
+
+      // counter .. ([x.y])
+      const counterSpan = document.createElement('span');
+      counterSpan.className = 'counter';
+      counterSpan.textContent = '';   // filled when modal opens
+      zoomBar.appendChild(counterSpan);
+
       const minusBtn = document.createElement('button');
       minusBtn.className = 'zoom-btn';
       minusBtn.textContent = '[-]';
+
       const zoomVal = document.createElement('span');
       zoomVal.className = 'zoom-value';
       zoomVal.textContent = '100% (1x)';
+
       const plusBtn = document.createElement('button');
       plusBtn.className = 'zoom-btn';
       plusBtn.textContent = '[+]';
+
       zoomBar.appendChild(minusBtn);
       zoomBar.appendChild(zoomVal);
       zoomBar.appendChild(plusBtn);
       document.body.appendChild(zoomBar);
       zoomBar.style.display = 'none';
 
+      // aspect ratios on bottom
+      const dimDisplay = document.createElement('div');
+      dimDisplay.className = 'dimensions-display';
+      dimDisplay.textContent = '';   // closes when modal closes
+      document.body.appendChild(dimDisplay);
+
+      // updates
       function updateTransform() {
         modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
       }
@@ -373,9 +405,47 @@
         modalImg.style.cursor = 'grab';
       }
 
-      function openModal(src, alt) {
+      function updateCounter() {
+        counterSpan.textContent = `[${currentArtIndex + 1}/${TOTAL}]`;
+      }
+
+      function showLoadingDimensions() {
+        dimDisplay.textContent = '[loading...]';
+      }
+
+      function updateDimensionsFromImage() {
+        if (modalImg.naturalWidth && modalImg.naturalHeight) {
+          dimDisplay.textContent = `${modalImg.naturalWidth}×${modalImg.naturalHeight}`;
+        } else {
+          dimDisplay.textContent = '';
+        }
+      }
+
+      // handle image loading
+      function onModalImageLoad() {
+        if (modalImg.src === currentLoadedSrc) {
+          updateDimensionsFromImage();
+        }
+      }
+
+      function onModalImageError() {
+        if (modalImg.src === currentLoadedSrc) {
+          dimDisplay.textContent = '?×?';
+        }
+      }
+
+      // modal opens for spec img
+      function openModal(src, alt, index) {
+        // cleaning
+        modalImg.removeEventListener('load', onModalImageLoad);
+        modalImg.removeEventListener('error', onModalImageError);
+
+        // set to new img
         modalImg.src = src;
         modalImg.alt = alt;
+        currentLoadedSrc = src;
+        currentArtIndex = index;
+
         modal.style.display = "flex";
         currentZoom = 1;
         translateX = 0;
@@ -384,6 +454,15 @@
         zoomBar.style.display = 'flex';
         modalImg.style.cursor = 'grab';
         zoomVal.textContent = '100% (1x)';
+
+        // counter > load
+        updateCounter();
+        showLoadingDimensions();
+
+        // loads.
+        modalImg.addEventListener('load', onModalImageLoad);
+        modalImg.addEventListener('error', onModalImageError);
+
         document.body.style.overflow = 'hidden';
         document.body.style.touchAction = 'none';
       }
@@ -391,11 +470,25 @@
       function closeModal() {
         modal.style.display = "none";
         zoomBar.style.display = 'none';
+        dimDisplay.textContent = '';
         document.body.style.overflow = '';
         document.body.style.touchAction = '';
       }
 
-      // Drag & pan – allowed at ANY zoom level (including 1x)
+      // nav added w/ arrow keys
+      function navigateModal(direction) {
+        if (modal.style.display !== 'flex') return;
+        let newIndex;
+        if (direction === 'left') {
+          newIndex = (currentArtIndex - 1 + TOTAL) % TOTAL;
+        } else {
+          newIndex = (currentArtIndex + 1) % TOTAL;
+        }
+        const art = artworks[newIndex];
+        openModal(`images/${art.filename}`, art.title, newIndex);
+      }
+
+      // drag & pan
       function startDrag(e) {
         if (modal.style.display !== 'flex') return;
         e.preventDefault();
@@ -437,16 +530,19 @@
         setZoom(currentZoom + delta);
       }
 
-      // attach click handlers to gallery images
+      // galley imgs binded to idx
       function bindClicks() {
         document.querySelectorAll('.art-card img').forEach(img => {
           img.removeEventListener('click', img._handler);
-          img._handler = () => openModal(img.src, img.alt);
+          img._handler = () => {
+            const idx = parseInt(img.getAttribute('data-index'), 10);
+            openModal(img.src, img.alt, idx);
+          };
           img.addEventListener('click', img._handler);
         });
       }
 
-      // event binding
+      // event binds,
       minusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom - 1); });
       plusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom + 1); });
       closeBtn.addEventListener('click', closeModal);
@@ -461,15 +557,18 @@
       window.addEventListener('touchend', stopDrag);
       window.addEventListener('keydown', (e) => {
         if (modal.style.display !== 'flex') return;
-        if (e.key === 'Escape') closeModal();
-        if (e.key === '+' || e.key === '=') setZoom(currentZoom + 1);
-        if (e.key === '-') setZoom(currentZoom - 1);
-        if (e.key === 'r' || e.key === 'R') setZoom(1);
+        if (e.key === 'Escape') { closeModal(); return; }
+        if (e.key === '+' || e.key === '=') { setZoom(currentZoom + 1); return; }
+        if (e.key === '-') { setZoom(currentZoom - 1); return; }
+        if (e.key === 'r' || e.key === 'R') { setZoom(1); return; }
+        // Arrow key navigation
+        if (e.key === 'ArrowLeft') { e.preventDefault(); navigateModal('left'); return; }
+        if (e.key === 'ArrowRight') { e.preventDefault(); navigateModal('right'); return; }
       });
 
       bindClicks();
 
-      // tiny flash for zoom indicator
+      // flash anims (zoom)
       const style = document.createElement('style');
       style.textContent = `.zoom-flash { animation: pulse 0.12s ease-out; } @keyframes pulse { 0% { color: #fff; text-shadow: 0 0 3px #5DCCBA; } 100% { color: #BBDFD8; } }`;
       document.head.appendChild(style);
