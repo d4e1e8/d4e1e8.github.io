@@ -23,19 +23,6 @@
       min-height: 100vh;
     }
 
-    /* subtle scanline effect */
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      background: repeating-linear-gradient(0deg, rgba(0, 20, 0, 0.08) 0px, rgba(0, 20, 0, 0.08) 2px, transparent 2px, transparent 8px);
-      z-index: 9999;
-    }
-
     header {
       max-width: 1000px;
       margin: 0 auto 3rem auto;
@@ -107,10 +94,12 @@
       max-width: 95%;
       margin-left: auto;
       margin-right: auto;
-      background: #0f120f80;
-      padding: 0.25rem 0.9rem;
-      border-radius: 12px;
-      backdrop-filter: blur(2px);
+      background: #0f120f;
+      padding: 0.3rem 0.9rem;
+      border-radius: 6px;
+      border: 1px solid #2a4d2a;
+      display: inline-block;
+      width: auto;
     }
 
     /* MODAL */
@@ -134,7 +123,6 @@
       max-height: 92vh;
       width: auto;
       height: auto;
-      border: 2px solid #3f7840;
       background: #0c100c;
       box-shadow: 0 0 0 2px #1f3a1f, 0 20px 40px black;
       image-rendering: crisp-edges;
@@ -184,7 +172,7 @@
       background: #0c100cee;
       backdrop-filter: blur(12px);
       padding: 0.6rem 1.2rem;
-      border-radius: 48px;
+      border-radius: 8px;
       border: 1px solid #2d6b2d;
       z-index: 10002;
     }
@@ -197,7 +185,7 @@
       font-size: 1.2rem;
       cursor: pointer;
       padding: 0.25rem 1rem;
-      border-radius: 30px;
+      border-radius: 6px;
       min-width: 64px;
       text-align: center;
     }
@@ -211,7 +199,7 @@
     .zoom-value {
       background: #101a10;
       padding: 0.25rem 1.1rem;
-      border-radius: 30px;
+      border-radius: 6px;
       font-family: monospace;
       font-size: 0.85rem;
       color: #bff0bf;
@@ -250,7 +238,7 @@
         dateSpan.textContent = `${today.getMonth()+1}.${today.getDate()}.${today.getFullYear().toString().slice(2)}`;
       }
 
-      // artworks list (exactly as you provided)
+      // artworks list (same as yours)
       const artworks = [
         { filename: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous.png", title: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous" },
         { filename: "Untitled-beats,NothingMakesItAnymore001.png", title: "Untitled-beats,NothingMakesItAnymore001" },
@@ -345,13 +333,15 @@
         if (newLevel > 5) newLevel = 5;
         if (currentZoom === newLevel) return;
         currentZoom = newLevel;
+        // reset pan position when zoom changes (keeps image centered)
         translateX = 0;
         translateY = 0;
         updateTransform();
         zoomVal.textContent = `${Math.floor(currentZoom * 100)}% (${currentZoom}x)`;
         zoomVal.classList.add('zoom-flash');
         setTimeout(() => zoomVal.classList.remove('zoom-flash'), 100);
-        modalImg.style.cursor = currentZoom === 1 ? 'zoom-in' : 'grab';
+        // cursor style: always grab because dragging allowed at any zoom
+        modalImg.style.cursor = 'grab';
       }
 
       function openModal(src, alt) {
@@ -363,7 +353,7 @@
         translateY = 0;
         updateTransform();
         zoomBar.style.display = 'flex';
-        modalImg.style.cursor = 'zoom-in';
+        modalImg.style.cursor = 'grab';
         zoomVal.textContent = '100% (1x)';
         document.body.style.overflow = 'hidden';
         document.body.style.touchAction = 'none';
@@ -376,10 +366,9 @@
         document.body.style.touchAction = '';
       }
 
-      // drag & pan (only when zoomed >1)
+      // Drag & pan – allowed at ANY zoom level (including 1x)
       function startDrag(e) {
         if (modal.style.display !== 'flex') return;
-        if (currentZoom === 1) return;
         e.preventDefault();
         isDragging = true;
         let clientX, clientY;
@@ -393,7 +382,7 @@
       }
 
       function onDrag(e) {
-        if (!isDragging || modal.style.display !== 'flex' || currentZoom === 1) return;
+        if (!isDragging || modal.style.display !== 'flex') return;
         e.preventDefault();
         let clientX, clientY;
         if (e.type === 'mousemove') { clientX = e.clientX; clientY = e.clientY; }
@@ -408,7 +397,7 @@
         if (!isDragging) return;
         isDragging = false;
         modalImg.style.transition = '';
-        modalImg.style.cursor = currentZoom === 1 ? 'zoom-in' : 'grab';
+        modalImg.style.cursor = 'grab';
       }
 
       // wheel zoom
@@ -451,7 +440,7 @@
 
       bindClicks();
 
-      // tiny flash style for zoom indicator
+      // small animation for zoom indicator
       const style = document.createElement('style');
       style.textContent = `.zoom-flash { animation: pulse 0.12s ease-out; } @keyframes pulse { 0% { color: #fff; text-shadow: 0 0 3px #8eff8e; } 100% { color: #bff0bf; } }`;
       document.head.appendChild(style);
