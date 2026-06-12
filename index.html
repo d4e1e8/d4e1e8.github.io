@@ -55,28 +55,38 @@
       flex-direction: column;
       align-items: center;
       gap: 4rem;
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto;
       width: 100%;
     }
 
     .art-card {
       width: 100%;
+      text-align: center;
     }
 
+    /* PIXEL PERFECT: images keep their native dimensions, never scaled up.
+       If the screen is narrower, they shrink but remain sharp (pixelated). */
     .art-card img {
-      width: 100%;
-      max-width: 900px;
-      height: auto;
       display: block;
       margin: 0 auto;
       border: 2px solid #2d4d2d;
       background: #101210;
       box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px #2a552a inset;
       cursor: zoom-in;
+      transition: border 0.1s, box-shadow 0.1s;
+
+      /* Crucial for pixel art */
       image-rendering: crisp-edges;
       image-rendering: pixelated;
-      transition: border 0.1s, box-shadow 0.1s;
+      image-rendering: pixelated; /* for Firefox */
+      -ms-interpolation-mode: nearest-neighbor;
+
+      /* No forced scaling – use natural size, but shrink if needed */
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
     }
 
     .art-card img:hover {
@@ -102,7 +112,7 @@
       width: auto;
     }
 
-    /* MODAL */
+    /* MODAL - already pixel perfect (user confirmed) */
     .modal {
       display: none;
       position: fixed;
@@ -238,7 +248,7 @@
         dateSpan.textContent = `${today.getMonth()+1}.${today.getDate()}.${today.getFullYear().toString().slice(2)}`;
       }
 
-      // artworks list (same as yours)
+      // artworks list (exactly as you provided)
       const artworks = [
         { filename: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous.png", title: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous" },
         { filename: "Untitled-beats,NothingMakesItAnymore001.png", title: "Untitled-beats,NothingMakesItAnymore001" },
@@ -333,14 +343,12 @@
         if (newLevel > 5) newLevel = 5;
         if (currentZoom === newLevel) return;
         currentZoom = newLevel;
-        // reset pan position when zoom changes (keeps image centered)
         translateX = 0;
         translateY = 0;
         updateTransform();
         zoomVal.textContent = `${Math.floor(currentZoom * 100)}% (${currentZoom}x)`;
         zoomVal.classList.add('zoom-flash');
         setTimeout(() => zoomVal.classList.remove('zoom-flash'), 100);
-        // cursor style: always grab because dragging allowed at any zoom
         modalImg.style.cursor = 'grab';
       }
 
@@ -440,7 +448,7 @@
 
       bindClicks();
 
-      // small animation for zoom indicator
+      // tiny flash for zoom indicator
       const style = document.createElement('style');
       style.textContent = `.zoom-flash { animation: pulse 0.12s ease-out; } @keyframes pulse { 0% { color: #fff; text-shadow: 0 0 3px #8eff8e; } 100% { color: #bff0bf; } }`;
       document.head.appendChild(style);
