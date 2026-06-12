@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>canv — drawings</title>
-  <!-- cache buster: 2026-06-12-01 -->
   <style>
     * {
       margin: 0;
@@ -12,22 +11,13 @@
       box-sizing: border-box;
     }
 
-    html, body {
-      height: 100%;
-    }
-
+    /* Fixed background dots layer (static while scrolling) */
     body {
       background: #181A1F;
-      color: #D0D5DB;
-      font-family: "Fira Code", "JetBrains Mono", "Hack", monospace;
-      font-size: 1rem;
-      line-height: 1.5;
-      padding: 2rem 2rem 4rem 2rem;
-      overflow-y: auto;
-      position: static;
+      position: relative;
+      min-height: 100vh;
     }
 
-    /* Static background dots */
     .bg-dots {
       position: fixed;
       top: 0;
@@ -40,10 +30,18 @@
       z-index: 0;
     }
 
-    /* Content above dots */
+    /* Content layer sits above dots */
     body > *:not(.bg-dots) {
       position: relative;
       z-index: 1;
+    }
+
+    body {
+      color: #D0D5DB;
+      font-family: "Fira Code", "JetBrains Mono", "Hack", monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      padding: 2rem 2rem 4rem 2rem;
     }
 
     header {
@@ -88,6 +86,7 @@
       text-align: center;
     }
 
+    /* PIXEL PERFECT: images keep native dimensions, never stretched */
     .art-card img {
       display: block;
       margin: 0 auto;
@@ -96,8 +95,11 @@
       box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px #2F4E48 inset;
       cursor: zoom-in;
       transition: border 0.1s, box-shadow 0.1s;
+
       image-rendering: crisp-edges;
       image-rendering: pixelated;
+      -ms-interpolation-mode: nearest-neighbor;
+
       width: auto;
       max-width: 100%;
       height: auto;
@@ -116,11 +118,15 @@
       color: #A6B3C0;
       font-family: monospace;
       word-break: break-all;
+      max-width: 95%;
+      margin-left: auto;
+      margin-right: auto;
       background: #20232A;
       padding: 0.3rem 0.9rem;
       border-radius: 6px;
       border: 1px solid #3E5D58;
       display: inline-block;
+      width: auto;
     }
 
     /* MODAL */
@@ -152,6 +158,7 @@
       transition: transform 0.08s linear;
       cursor: grab;
       user-select: none;
+      will-change: transform;
     }
 
     .modal-content:active {
@@ -168,17 +175,18 @@
       padding: 0.4rem 1rem;
       font-family: monospace;
       font-size: 1.2rem;
+      font-weight: 500;
       color: #D0E5E1;
       cursor: pointer;
       z-index: 10001;
       border-radius: 6px;
-      display: flex;
-      align-items: center;
+      letter-spacing: 1px;
     }
 
     .close-modal:hover {
       background: #2D5650;
       border-color: #5DCCBA;
+      color: white;
       transform: scale(0.97);
     }
 
@@ -191,11 +199,10 @@
       gap: 0.6rem;
       background: #20232AEE;
       backdrop-filter: blur(12px);
-      padding: 0.5rem 1.2rem;
+      padding: 0.6rem 1.2rem;
       border-radius: 8px;
       border: 1px solid #3E6B64;
       z-index: 10002;
-      align-items: center;
     }
 
     .zoom-btn {
@@ -205,330 +212,268 @@
       font-family: monospace;
       font-size: 1.2rem;
       cursor: pointer;
-      padding: 0.2rem 0.9rem;
+      padding: 0.25rem 1rem;
       border-radius: 6px;
-      line-height: 1;
+      min-width: 64px;
+      text-align: center;
     }
 
     .zoom-btn:hover {
       background: #2D5650;
       border-color: #5DCCBA;
+      color: #ffffff;
       transform: scale(0.96);
     }
 
-    .zoom-value, .counter {
+    .zoom-value {
       background: #111317;
-      padding: 0.2rem 1rem;
+      padding: 0.25rem 1.1rem;
       border-radius: 6px;
       font-family: monospace;
       font-size: 0.85rem;
       color: #BBDFD8;
       border: 1px solid #3E6B64;
+      min-width: 110px;
       text-align: center;
-    }
-
-    .modal-info {
-      position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      font-size: 0.7rem;
-      font-family: monospace;
-      color: #8E9BA8;
-      background: rgba(18, 20, 24, 0.7);
-      backdrop-filter: blur(4px);
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-      pointer-events: none;
-      z-index: 10003;
     }
 
     @media (max-width: 700px) {
       body { padding: 1rem 1rem 4rem 1rem; }
-      .zoom-btn { padding: 0.2rem 0.6rem; font-size: 1rem; }
-      .zoom-value, .counter { font-size: 0.7rem; padding: 0.2rem 0.6rem; }
+      .zoom-btn { padding: 0.2rem 0.8rem; min-width: 54px; font-size: 1rem; }
+      .zoom-value { min-width: 85px; font-size: 0.7rem; }
       .close-modal { top: 0.8rem; right: 0.8rem; padding: 0.3rem 0.8rem; }
-      .modal-info { font-size: 0.6rem; }
     }
   </style>
 </head>
 <body>
-<div class="bg-dots"></div>
+  <div class="bg-dots"></div>
 
-<header>
-  <h1>canv</h1>
-  <p class="sub-title">updated: <span id="date"></span></p>
-</header>
+  <header>
+    <h1>canv</h1>
+    <p class="sub-title">updated: <span id="date"></span></p>
+  </header>
 
-<main class="gallery" id="gallery"></main>
+  <main class="gallery" id="gallery"></main>
 
-<div id="art-modal" class="modal">
-  <span class="close-modal" id="closeModalBtn">[x]</span>
-  <img class="modal-content" id="modal-img" alt="Zoomed View">
-  <div class="modal-info" id="modalInfo">[loading...]</div>
-</div>
+  <div id="art-modal" class="modal">
+    <span class="close-modal" id="closeModalBtn">[x]</span>
+    <img class="modal-content" id="modal-img" alt="Zoomed View">
+  </div>
 
-<script>
-  (function() {
-    // Set date
-    const dateSpan = document.getElementById('date');
-    if (dateSpan) {
-      const today = new Date();
-      dateSpan.textContent = `${today.getMonth()+1}.${today.getDate()}.${today.getFullYear().toString().slice(2)}`;
-    }
+  <script>
+    (function() {
+      // set current date
+      const dateSpan = document.getElementById('date');
+      if (dateSpan) {
+        const today = new Date();
+        dateSpan.textContent = `${today.getMonth()+1}.${today.getDate()}.${today.getFullYear().toString().slice(2)}`;
+      }
 
-    // Full artworks list (same as yours)
-    const artworks = [
-      { filename: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous.png", title: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous" },
-      { filename: "Untitled-beats,NothingMakesItAnymore001.png", title: "Untitled-beats,NothingMakesItAnymore001" },
-      { filename: "Untitled-large001.png", title: "Untitled-large001" },
-      { filename: "Untitled-putativeUndulatingParticipable;leapK501.png", title: "Untitled-putativeUndulatingParticipable;leapK501" },
-      { filename: "Untitled-ok156X.png", title: "Untitled-ok156X" },
-      { filename: "Untitled-plethoraOfTheSamePellucidExisting01.jpg", title: "Untitled-plethoraOfTheSamePellucidExisting01" },
-      { filename: "Untitled-xyl-Tribute;perceptionalEndictionariliteral.jpg", title: "Untitled-xyl-Tribute;perceptionalEndictionariliteral" },
-      { filename: "Untitled-dissimilationTwiningToOrThenAndAlwaysThenMaybeSomedayToPossibleMomentsThenAlsoAfterNoBefore1.jpg", title: "Untitled-dissimilationTwiningToOrThenAndAlwaysThenMaybeSomedayToPossibleMomentsThenAlsoAfterNoBefore1" },
-      { filename: "Untitled-0b0000xfif1.jpg", title: "Untitled-0b0000xfif1" },
-      { filename: "Untitled-0b0000xfif2.jpg", title: "Untitled-0b0000xfif2" },
-      { filename: "Untitled-nothing000002.jpg", title: "Untitled-nothing000002" },
-      { filename: "Untitled-wellnessDocumented;NowEffloresceIntoBlithesome024.jpg", title: "Untitled-wellnessDocumented;NowEffloresceIntoBlithesome024" },
-      { filename: "Untitled-dayAndAfter00.jpg", title: "Untitled-dayAndAfter00" },
-      { filename: "Untitled-dayAndAfter99.jpg", title: "Untitled-dayAndAfter99" },
-      { filename: "Untitled-microThermalIncisionPlasteringSubcorticalDeformingAstralColumnGalvanizingConclusiveExampleSubject001.jpg", title: "Untitled-microThermalIncisionPlasteringSubcorticalDeformingAstralColumnGalvanizingConclusiveExampleSubject001" },
-      { filename: "Untitled-forEveryWord001.jpg", title: "Untitled-forEveryWord001" },
-      { filename: "Untitled-andThenLooking_cerebralExtension(synapticReconfiguration_decompartmentalizing).jpg", title: "Untitled-andThenLooking_cerebralExtension(synapticReconfiguration_decompartmentalizing)" },
-      { filename: "Untitled-everyoneNeedsToBe02.jpg", title: "Untitled-everyoneNeedsToBe02" },
-      { filename: "Untitled-friends_92.jpg", title: "Untitled-friends_92" },
-      { filename: "Untitled-IHTL2.png", title: "Untitled-IHTL2" },
-      { filename: "Untitled-Squash58.jpg", title: "Untitled-Squash58" },
-      { filename: "Untitled-enterIDWTEA9902x3.jpg", title: "Untitled-enterIDWTEA9902x3" },
-      { filename: "Untitled-watchAsBC6.png", title: "Untitled-watchAsBC6" },
-      { filename: "Untitled-alwaysAnd092.png", title: "Untitled-alwaysAnd092" },
-      { filename: "Untitled-faces;perturbedFigurePulling.jpg", title: "Untitled-faces;perturbedFigurePulling" },
-      { filename: "Untitled-allThatSeaFor10000679.png", title: "Untitled-allThatSeaFor10000679" },
-      { filename: "Untitled-coreMemory002.png", title: "Untitled-coreMemory002" },
-      { filename: "Untitled-LacerationAndNeighbors.png", title: "Untitled-LacerationAndNeighbors" },
-      { filename: "Untitled-phaseB01.png", title: "Untitled-phaseB01" },
-      { filename: "Untitled-treatB.19.2075.png", title: "Untitled-treatB.19.2075" },
-      { filename: "Untitled-viewFrom1.png", title: "Untitled-viewFrom1" },
-      { filename: "Untitled-works0..7.png", title: "Untitled-works0..7" }
-    ];
+      // artworks list (exactly as you provided)
+      const artworks = [
+        { filename: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous.png", title: "Untitled-projection;(superpositionFluxSurfaceLevel)operateAbecedarianVegetiveStatesProductionIllimitableNonterminous" },
+        { filename: "Untitled-beats,NothingMakesItAnymore001.png", title: "Untitled-beats,NothingMakesItAnymore001" },
+        { filename: "Untitled-large001.png", title: "Untitled-large001" },
+        { filename: "Untitled-putativeUndulatingParticipable;leapK501.png", title: "Untitled-putativeUndulatingParticipable;leapK501" },
+        { filename: "Untitled-ok156X.png", title: "Untitled-ok156X" },
+        { filename: "Untitled-plethoraOfTheSamePellucidExisting01.jpg", title: "Untitled-plethoraOfTheSamePellucidExisting01" },
+        { filename: "Untitled-xyl-Tribute;perceptionalEndictionariliteral.jpg", title: "Untitled-xyl-Tribute;perceptionalEndictionariliteral" },
+        { filename: "Untitled-dissimilationTwiningToOrThenAndAlwaysThenMaybeSomedayToPossibleMomentsThenAlsoAfterNoBefore1.jpg", title: "Untitled-dissimilationTwiningToOrThenAndAlwaysThenMaybeSomedayToPossibleMomentsThenAlsoAfterNoBefore1" },
+        { filename: "Untitled-0b0000xfif1.jpg", title: "Untitled-0b0000xfif1" },
+        { filename: "Untitled-0b0000xfif2.jpg", title: "Untitled-0b0000xfif2" },
+        { filename: "Untitled-nothing000002.jpg", title: "Untitled-nothing000002" },
+        { filename: "Untitled-wellnessDocumented;NowEffloresceIntoBlithesome024.jpg", title: "Untitled-wellnessDocumented;NowEffloresceIntoBlithesome024" },
+        { filename: "Untitled-dayAndAfter00.jpg", title: "Untitled-dayAndAfter00" },
+        { filename: "Untitled-dayAndAfter99.jpg", title: "Untitled-dayAndAfter99" },
+        { filename: "Untitled-microThermalIncisionPlasteringSubcorticalDeformingAstralColumnGalvanizingConclusiveExampleSubject001.jpg", title: "Untitled-microThermalIncisionPlasteringSubcorticalDeformingAstralColumnGalvanizingConclusiveExampleSubject001" },
+        { filename: "Untitled-forEveryWord001.jpg", title: "Untitled-forEveryWord001" },
+        { filename: "Untitled-andThenLooking_cerebralExtension(synapticReconfiguration_decompartmentalizing).jpg", title: "Untitled-andThenLooking_cerebralExtension(synapticReconfiguration_decompartmentalizing)" },
+        { filename: "Untitled-everyoneNeedsToBe02.jpg", title: "Untitled-everyoneNeedsToBe02" },
+        { filename: "Untitled-friends_92.jpg", title: "Untitled-friends_92" },
+        { filename: "Untitled-IHTL2.png", title: "Untitled-IHTL2" },
+        { filename: "Untitled-Squash58.jpg", title: "Untitled-Squash58" },
+        { filename: "Untitled-enterIDWTEA9902x3.jpg", title: "Untitled-enterIDWTEA9902x3" },
+        { filename: "Untitled-watchAsBC6.png", title: "Untitled-watchAsBC6" },
+        { filename: "Untitled-alwaysAnd092.png", title: "Untitled-alwaysAnd092" },
+        { filename: "Untitled-faces;perturbedFigurePulling.jpg", title: "Untitled-faces;perturbedFigurePulling" },
+        { filename: "Untitled-allThatSeaFor10000679.png", title: "Untitled-allThatSeaFor10000679" },
+        { filename: "Untitled-coreMemory002.png", title: "Untitled-coreMemory002" },
+        { filename: "Untitled-LacerationAndNeighbors.png", title: "Untitled-LacerationAndNeighbors" },
+        { filename: "Untitled-phaseB01.png", title: "Untitled-phaseB01" },
+        { filename: "Untitled-treatB.19.2075.png", title: "Untitled-treatB.19.2075" },
+        { filename: "Untitled-viewFrom1.png", title: "Untitled-viewFrom1" },
+        { filename: "Untitled-works0..7.png", title: "Untitled-works0..7" }
+      ];
 
-    // Build gallery
-    const gallery = document.getElementById('gallery');
-    if (gallery) {
-      const fragment = document.createDocumentFragment();
-      artworks.forEach((art, idx) => {
-        const card = document.createElement('article');
-        card.className = 'art-card';
-        const img = document.createElement('img');
-        img.src = `images/${art.filename}`;
-        img.alt = art.title;
-        img.loading = 'lazy';
-        img.setAttribute('data-index', idx);
-        const title = document.createElement('h2');
-        title.className = 'art-title';
-        title.textContent = art.title;
-        card.appendChild(img);
-        card.appendChild(title);
-        fragment.appendChild(card);
-      });
-      gallery.appendChild(fragment);
-    }
+      // render gallery
+      const gallery = document.getElementById('gallery');
+      if (gallery) {
+        const frag = document.createDocumentFragment();
+        for (const art of artworks) {
+          const article = document.createElement('article');
+          article.className = 'art-card';
+          const img = document.createElement('img');
+          img.src = `images/${art.filename}`;
+          img.alt = art.title;
+          img.loading = 'lazy';
+          const title = document.createElement('h2');
+          title.className = 'art-title';
+          title.textContent = art.title;
+          article.appendChild(img);
+          article.appendChild(title);
+          frag.appendChild(article);
+        }
+        gallery.appendChild(frag);
+      }
 
-    // DOM elements
-    const modal = document.getElementById('art-modal');
-    const modalImg = document.getElementById('modal-img');
-    const closeBtn = document.getElementById('closeModalBtn');
-    const modalInfo = document.getElementById('modalInfo');
+      // modal elements
+      const modal = document.getElementById("art-modal");
+      const modalImg = document.getElementById("modal-img");
+      const closeBtn = document.getElementById("closeModalBtn");
 
-    // Zoom bar and counter
-    const zoomBar = document.createElement('div');
-    zoomBar.className = 'zoom-control-bar';
-    const counterSpan = document.createElement('span');
-    counterSpan.className = 'counter';
-    counterSpan.textContent = '[1/32]';
-    const minusBtn = document.createElement('button');
-    minusBtn.className = 'zoom-btn';
-    minusBtn.textContent = '[-]';
-    const zoomVal = document.createElement('span');
-    zoomVal.className = 'zoom-value';
-    zoomVal.textContent = '100% (1x)';
-    const plusBtn = document.createElement('button');
-    plusBtn.className = 'zoom-btn';
-    plusBtn.textContent = '[+]';
-    zoomBar.appendChild(counterSpan);
-    zoomBar.appendChild(minusBtn);
-    zoomBar.appendChild(zoomVal);
-    zoomBar.appendChild(plusBtn);
-    document.body.appendChild(zoomBar);
-    zoomBar.style.display = 'none';
+      let currentZoom = 1;
+      let translateX = 0, translateY = 0;
+      let isDragging = false;
+      let startX = 0, startY = 0;
 
-    // State
-    let currentIndex = 0;
-    let currentZoom = 1;
-    let translateX = 0, translateY = 0;
-    let isDragging = false;
-    let startX = 0, startY = 0;
-
-    function updateTransform() {
-      modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
-    }
-
-    function setZoom(level) {
-      let newLevel = Math.round(level);
-      if (newLevel < 1) newLevel = 1;
-      if (newLevel > 5) newLevel = 5;
-      if (currentZoom === newLevel) return;
-      currentZoom = newLevel;
-      translateX = 0;
-      translateY = 0;
-      updateTransform();
-      zoomVal.textContent = `${Math.floor(currentZoom * 100)}% (${currentZoom}x)`;
-      zoomVal.classList.add('zoom-flash');
-      setTimeout(() => zoomVal.classList.remove('zoom-flash'), 100);
-      modalImg.style.cursor = 'grab';
-    }
-
-    function loadImageByIndex(index) {
-      const art = artworks[index];
-      if (!art) return;
-      modalInfo.textContent = '[loading...]';
-      modalImg.style.opacity = '0.8';
-      modalImg.src = `images/${art.filename}`;
-      modalImg.alt = art.title;
-      // Reset zoom and pan for new image
-      currentZoom = 1;
-      translateX = 0;
-      translateY = 0;
-      updateTransform();
+      // create zoom bar
+      const zoomBar = document.createElement('div');
+      zoomBar.className = 'zoom-control-bar';
+      const minusBtn = document.createElement('button');
+      minusBtn.className = 'zoom-btn';
+      minusBtn.textContent = '[-]';
+      const zoomVal = document.createElement('span');
+      zoomVal.className = 'zoom-value';
       zoomVal.textContent = '100% (1x)';
-      modalImg.style.cursor = 'grab';
-      counterSpan.textContent = `[${index+1}/${artworks.length}]`;
-    }
-
-    function openModal(index) {
-      currentIndex = index;
-      modal.style.display = 'flex';
-      zoomBar.style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-      loadImageByIndex(currentIndex);
-    }
-
-    function closeModal() {
-      modal.style.display = 'none';
+      const plusBtn = document.createElement('button');
+      plusBtn.className = 'zoom-btn';
+      plusBtn.textContent = '[+]';
+      zoomBar.appendChild(minusBtn);
+      zoomBar.appendChild(zoomVal);
+      zoomBar.appendChild(plusBtn);
+      document.body.appendChild(zoomBar);
       zoomBar.style.display = 'none';
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    }
 
-    function nextImage() {
-      if (modal.style.display !== 'flex') return;
-      currentIndex = (currentIndex + 1) % artworks.length;
-      loadImageByIndex(currentIndex);
-    }
+      function updateTransform() {
+        modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+      }
 
-    function prevImage() {
-      if (modal.style.display !== 'flex') return;
-      currentIndex = (currentIndex - 1 + artworks.length) % artworks.length;
-      loadImageByIndex(currentIndex);
-    }
+      function setZoom(level) {
+        let newLevel = Math.round(level);
+        if (newLevel < 1) newLevel = 1;
+        if (newLevel > 5) newLevel = 5;
+        if (currentZoom === newLevel) return;
+        currentZoom = newLevel;
+        translateX = 0;
+        translateY = 0;
+        updateTransform();
+        zoomVal.textContent = `${Math.floor(currentZoom * 100)}% (${currentZoom}x)`;
+        zoomVal.classList.add('zoom-flash');
+        setTimeout(() => zoomVal.classList.remove('zoom-flash'), 100);
+        modalImg.style.cursor = 'grab';
+      }
 
-    // Drag and pan (works at any zoom)
-    function startDrag(e) {
-      if (modal.style.display !== 'flex') return;
-      e.preventDefault();
-      isDragging = true;
-      let clientX, clientY;
-      if (e.type === 'mousedown') { clientX = e.clientX; clientY = e.clientY; }
-      else if (e.type === 'touchstart') { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
-      else return;
-      startX = clientX - translateX;
-      startY = clientY - translateY;
-      modalImg.style.transition = 'none';
-      modalImg.style.cursor = 'grabbing';
-    }
+      function openModal(src, alt) {
+        modalImg.src = src;
+        modalImg.alt = alt;
+        modal.style.display = "flex";
+        currentZoom = 1;
+        translateX = 0;
+        translateY = 0;
+        updateTransform();
+        zoomBar.style.display = 'flex';
+        modalImg.style.cursor = 'grab';
+        zoomVal.textContent = '100% (1x)';
+        document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none';
+      }
 
-    function onDrag(e) {
-      if (!isDragging || modal.style.display !== 'flex') return;
-      e.preventDefault();
-      let clientX, clientY;
-      if (e.type === 'mousemove') { clientX = e.clientX; clientY = e.clientY; }
-      else if (e.type === 'touchmove') { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
-      else return;
-      translateX = clientX - startX;
-      translateY = clientY - startY;
-      updateTransform();
-    }
+      function closeModal() {
+        modal.style.display = "none";
+        zoomBar.style.display = 'none';
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+      }
 
-    function stopDrag() {
-      if (!isDragging) return;
-      isDragging = false;
-      modalImg.style.transition = '';
-      modalImg.style.cursor = 'grab';
-    }
+      // Drag & pan – allowed at ANY zoom level (including 1x)
+      function startDrag(e) {
+        if (modal.style.display !== 'flex') return;
+        e.preventDefault();
+        isDragging = true;
+        let clientX, clientY;
+        if (e.type === 'mousedown') { clientX = e.clientX; clientY = e.clientY; }
+        else if (e.type === 'touchstart') { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+        else return;
+        startX = clientX - translateX;
+        startY = clientY - translateY;
+        modalImg.style.transition = 'none';
+        modalImg.style.cursor = 'grabbing';
+      }
 
-    function onWheel(e) {
-      if (modal.style.display !== 'flex') return;
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -1 : 1;
-      setZoom(currentZoom + delta);
-    }
+      function onDrag(e) {
+        if (!isDragging || modal.style.display !== 'flex') return;
+        e.preventDefault();
+        let clientX, clientY;
+        if (e.type === 'mousemove') { clientX = e.clientX; clientY = e.clientY; }
+        else if (e.type === 'touchmove') { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+        else return;
+        translateX = clientX - startX;
+        translateY = clientY - startY;
+        updateTransform();
+      }
 
-    // Show dimensions after image loads
-    modalImg.addEventListener('load', () => {
-      const w = modalImg.naturalWidth;
-      const h = modalImg.naturalHeight;
-      modalInfo.textContent = `${w}×${h}`;
-      modalImg.style.opacity = '';
-    });
-    modalImg.addEventListener('error', () => {
-      modalInfo.textContent = '[error]';
-      modalImg.style.opacity = '';
-    });
+      function stopDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+        modalImg.style.transition = '';
+        modalImg.style.cursor = 'grab';
+      }
 
-    // Click handlers for gallery images
-    function bindGalleryClicks() {
-      document.querySelectorAll('.art-card img').forEach(img => {
-        img.removeEventListener('click', img._clickHandler);
-        const idx = parseInt(img.getAttribute('data-index'), 10);
-        img._clickHandler = (e) => {
-          e.preventDefault();
-          openModal(idx);
-        };
-        img.addEventListener('click', img._clickHandler);
+      // wheel zoom
+      function onWheel(e) {
+        if (modal.style.display !== 'flex') return;
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -1 : 1;
+        setZoom(currentZoom + delta);
+      }
+
+      // attach click handlers to gallery images
+      function bindClicks() {
+        document.querySelectorAll('.art-card img').forEach(img => {
+          img.removeEventListener('click', img._handler);
+          img._handler = () => openModal(img.src, img.alt);
+          img.addEventListener('click', img._handler);
+        });
+      }
+
+      // event binding
+      minusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom - 1); });
+      plusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom + 1); });
+      closeBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+      modal.addEventListener('wheel', onWheel, { passive: false });
+      modalImg.addEventListener('mousedown', startDrag);
+      modalImg.addEventListener('touchstart', startDrag, { passive: false });
+      modalImg.addEventListener('dblclick', (e) => { e.stopPropagation(); setZoom(1); });
+      window.addEventListener('mousemove', onDrag);
+      window.addEventListener('mouseup', stopDrag);
+      window.addEventListener('touchmove', onDrag, { passive: false });
+      window.addEventListener('touchend', stopDrag);
+      window.addEventListener('keydown', (e) => {
+        if (modal.style.display !== 'flex') return;
+        if (e.key === 'Escape') closeModal();
+        if (e.key === '+' || e.key === '=') setZoom(currentZoom + 1);
+        if (e.key === '-') setZoom(currentZoom - 1);
+        if (e.key === 'r' || e.key === 'R') setZoom(1);
       });
-    }
 
-    // Event listeners for zoom bar and modal
-    minusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom - 1); });
-    plusBtn.addEventListener('click', () => { if (modal.style.display === 'flex') setZoom(currentZoom + 1); });
-    closeBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-    modal.addEventListener('wheel', onWheel, { passive: false });
-    modalImg.addEventListener('mousedown', startDrag);
-    modalImg.addEventListener('touchstart', startDrag, { passive: false });
-    modalImg.addEventListener('dblclick', (e) => { e.stopPropagation(); setZoom(1); });
-    window.addEventListener('mousemove', onDrag);
-    window.addEventListener('mouseup', stopDrag);
-    window.addEventListener('touchmove', onDrag, { passive: false });
-    window.addEventListener('touchend', stopDrag);
-    window.addEventListener('keydown', (e) => {
-      if (modal.style.display !== 'flex') return;
-      if (e.key === 'Escape') closeModal();
-      if (e.key === '+' || e.key === '=') setZoom(currentZoom + 1);
-      if (e.key === '-') setZoom(currentZoom - 1);
-      if (e.key === 'r' || e.key === 'R') setZoom(1);
-      if (e.key === 'ArrowLeft') prevImage();
-      if (e.key === 'ArrowRight') nextImage();
-    });
+      bindClicks();
 
-    bindGalleryClicks();
-
-    // Flash animation style
-    const style = document.createElement('style');
-    style.textContent = `.zoom-flash { animation: pulse 0.12s ease-out; } @keyframes pulse { 0% { color: #fff; text-shadow: 0 0 3px #5DCCBA; } 100% { color: #BBDFD8; } }`;
-    document.head.appendChild(style);
-  })();
-</script>
+      // tiny flash for zoom indicator
+      const style = document.createElement('style');
+      style.textContent = `.zoom-flash { animation: pulse 0.12s ease-out; } @keyframes pulse { 0% { color: #fff; text-shadow: 0 0 3px #5DCCBA; } 100% { color: #BBDFD8; } }`;
+      document.head.appendChild(style);
+    })();
+  </script>
 </body>
 </html>
