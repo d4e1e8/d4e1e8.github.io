@@ -18,8 +18,8 @@ body {
 }
 
 header {
-    max-width: 1200px;
-    margin: 0 auto 2rem auto;
+    max-width: 1400px;
+    margin: 0 auto 2.5rem auto;
     text-align: left;
     border-left: 3px solid #5DCCBA;
     padding-left: 1.5rem;
@@ -44,12 +44,30 @@ header h1 {
     padding-bottom: 0.25rem;
 }
 
-/* masonry-ish grid: css columns, cards keep their native aspect ratio */
+/* the random link — teal like the arrows, glows on hover */
+.random-btn {
+    color: #5DCCBA;
+    text-decoration: none;
+    transition: color 0.15s, text-shadow 0.15s;
+}
+
+.random-btn:hover {
+    color: #E5F0EF;
+    text-shadow: 0 0 6px rgba(93, 204, 186, 0.55);
+}
+
+/* ---------------------------------------------------------------
+ *  gallery
+ *  2 columns on most screens, 3 on very wide, 1 on mobile.
+ *  css columns so tall and short pieces flow without gaps.
+ *  no fixed heights = pixel art stays at its native aspect ratio.
+ *  --------------------------------------------------------------- */
+
 .gallery {
     max-width: 1400px;
     margin: 0 auto;
-    columns: 280px;
-    column-gap: 1.25rem;
+    columns: 2;
+    column-gap: 2rem;
 }
 
 .status {
@@ -58,6 +76,7 @@ header h1 {
     text-align: center;
     padding: 3rem 0;
     break-inside: avoid;
+    column-span: all;
 }
 
 .status.error {
@@ -66,7 +85,7 @@ header h1 {
 
 .art-card {
     break-inside: avoid;
-    margin-bottom: 1.25rem;
+    margin-bottom: 2.25rem;
     text-align: center;
 }
 
@@ -79,34 +98,46 @@ header h1 {
     background: #111317;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.45), 0 0 0 1px #2F4E48 inset;
     cursor: zoom-in;
-    transition: border 0.12s, box-shadow 0.12s, transform 0.12s;
+    transition: border-color 0.15s ease, box-shadow 0.3s ease;
 
-    /* pixel art rendering */
+    /* pixel art rendering — keep pixels crisp, never blur */
     image-rendering: crisp-edges;
     image-rendering: pixelated;
     -ms-interpolation-mode: nearest-neighbor;
 }
 
+/* dim teal halo — same hue as the modal arrows, quieter */
 .art-card img:hover {
     border-color: #5DCCBA;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.55), 0 0 0 1px #5DCCBA inset;
+    box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(93, 204, 186, 0.22),
+    0 0 0 1px #5DCCBA inset;
 }
 
+/* titles: dimmer, no pill badge, clamped to 2 lines.
+ *  full name still shows via the browser's tooltip (title attr). */
 .art-title {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
+    color: #7A858F;
     text-align: center;
     margin-top: 0.6rem;
-    color: #A6B3C0;
     font-family: monospace;
+    font-weight: 400;
     word-break: break-all;
-    background: #20232A;
-    padding: 0.25rem 0.7rem;
-    border-radius: 6px;
-    border: 1px solid #3E5D58;
-    display: inline-block;
+    max-width: 100%;
+    padding: 0 0.5rem;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-/* modal */
+/* ---------------------------------------------------------------
+ *  modal
+ *  --------------------------------------------------------------- */
+
 .modal {
     display: none;
     position: fixed;
@@ -130,8 +161,11 @@ header h1 {
     height: auto;
     background: #111317;
     box-shadow: 0 0 0 2px #2C4A44, 0 20px 40px black;
+
+    /* pixel art stays sharp at every zoom level */
     image-rendering: crisp-edges;
     image-rendering: pixelated;
+
     transform-origin: center center;
     cursor: grab;
     user-select: none;
@@ -166,7 +200,7 @@ header h1 {
     color: #fff;
 }
 
-/* prev / next hot zones */
+/* prev / next hot zones on the sides */
 .modal-nav {
     position: fixed;
     top: 50%;
@@ -190,13 +224,14 @@ header h1 {
 
 .modal-nav:hover {
     opacity: 1;
-    background: linear-gradient(to right, rgba(93,204,186,0.08), transparent);
+    background: linear-gradient(to right, rgba(93, 204, 186, 0.08), transparent);
 }
 
 .modal-next:hover {
-    background: linear-gradient(to left, rgba(93,204,186,0.08), transparent);
+    background: linear-gradient(to left, rgba(93, 204, 186, 0.08), transparent);
 }
 
+/* zoom bar — sits inside modal, shows when modal is open */
 .zoom-control-bar {
     position: fixed;
     bottom: 2rem;
@@ -213,8 +248,7 @@ header h1 {
     align-items: center;
 }
 
-.modal.open ~ .zoom-control-bar,
-.zoom-control-bar.show {
+.modal.open .zoom-control-bar {
     display: flex;
 }
 
@@ -245,7 +279,7 @@ header h1 {
     font-size: 0.85rem;
     color: #BBDFD8;
     border: 1px solid #3E6B64;
-    min-width: 84px;
+    min-width: 60px;
     text-align: center;
 }
 
@@ -267,14 +301,33 @@ header h1 {
     pointer-events: none;
 }
 
+/* ---------------------------------------------------------------
+ *  responsive
+ *  --------------------------------------------------------------- */
+
+@media (min-width: 1500px) {
+    .gallery {
+        columns: 3;
+        max-width: 1600px;
+    }
+    header { max-width: 1600px; }
+}
+
 @media (max-width: 700px) {
     body { padding: 1rem 1rem 4rem 1rem; }
-    .gallery { columns: 160px; column-gap: 0.7rem; }
-    .art-card { margin-bottom: 0.7rem; }
-    .art-title { font-size: 0.6rem; padding: 0.2rem 0.5rem; }
+    .gallery { columns: 1; column-gap: 0; }
+    .art-card { margin-bottom: 1.5rem; }
+    .art-title { font-size: 0.6rem; }
+
     .zoom-btn { padding: 0.2rem 0.6rem; min-width: 44px; font-size: 0.9rem; }
-    .zoom-value { min-width: 70px; font-size: 0.7rem; }
+    .zoom-value { min-width: 52px; font-size: 0.75rem; }
+    .zoom-control-bar { padding: 0.5rem 0.7rem; gap: 0.4rem; }
     .close-modal { top: 0.8rem; right: 0.8rem; padding: 0.3rem 0.8rem; }
     .modal-nav { width: 2.5rem; font-size: 2rem; }
     .dimensions-display { bottom: 5.5rem; right: 1rem; }
+}
+
+@media (max-width: 400px) {
+    .counter { display: none; }
+    .zoom-control-bar { padding: 0.4rem 0.5rem; gap: 0.3rem; }
 }

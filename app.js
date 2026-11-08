@@ -1,17 +1,17 @@
-// change these two if you rename the repo or move it to another account
-const REPO_OWNER = 'd4e1e8';
-const REPO_NAME  = 'd4e1e8.github.io';
+// change these two to match your repo
+const REPO_OWNER = 'your-username';
+const REPO_NAME  = 'your-repo';
 const IMAGES_DIR = 'images';
 
 const CACHE_KEY = 'canv-artworks-v1';
 const CACHE_TTL = 60 * 60 * 1000;   // 1hr, then refetch from api
-const MAX_FILES = 1000;             // github contents api hard cap per dir
+const MAX_FILES = 1000;
 
 // state
 const state = {
     artworks: [],
     index: 0,
-    zoom: 1,
+    zoom: 1,       // always an integer 1-8 (fractional only mid-pinch)
     tx: 0,
     ty: 0,
     dragging: false,
@@ -24,6 +24,7 @@ const galleryEl = document.getElementById('gallery');
 const statusEl  = document.getElementById('status');
 const dateSpan  = document.getElementById('date');
 const countSpan = document.getElementById('count');
+const randomBtn = document.getElementById('randomBtn');
 const modal     = document.getElementById('art-modal');
 const modalImg  = document.getElementById('modal-img');
 const closeBtn  = document.getElementById('closeModalBtn');
@@ -37,17 +38,16 @@ const zoomVal   = document.getElementById('zoomVal');
 const counterEl = document.getElementById('counter');
 const dimsEl    = document.getElementById('dims');
 
-// date
+// date stamp
 if (dateSpan) {
     const t = new Date();
     dateSpan.textContent = `${t.getMonth()+1}.${t.getDate()}.${t.getFullYear().toString().slice(2)}`;
 }
 
 // ---------------------------------------------------------------
-// fetching the file list
-// github contents api: one get = the whole directory listing.
-// cached in localstorage so we don't hit the rate limit on every
-// page view. if the api fails and we have cache, use it anyway.
+// fetching the file list from github
+// one request gives us the whole directory. cached so we don't
+// burn the 60/hr unauthenticated rate limit on every page view.
 // ---------------------------------------------------------------
 
 function readCache(ignoreAge = false) {
@@ -66,7 +66,7 @@ function readCache(ignoreAge = false) {
 function writeCache(items) {
     try {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), items }));
-    } catch (e) { /* quota, ignore */ }
+    } catch (e) { /* quota, whatever */ }
 }
 
 async function fetchArtworks() {
@@ -87,8 +87,6 @@ async function fetchArtworks() {
     .map(f => ({
         filename: f.name,
         title: f.name.replace(/\.[^.]+$/, ''),
-               // use the api download_url so we don't have to build the path ourselves
-               // (also handles renamed default branches, custom domains, etc)
                src: f.download_url,
     }));
 
@@ -119,12 +117,12 @@ function renderGallery() {
         img.alt = art.title;
         img.loading = 'lazy';
         img.decoding = 'async';
-        img.dataset.index = idx;
         img.addEventListener('click', () => openModal(idx));
 
         const title = document.createElement('h2');
         title.className = 'art-title';
         title.textContent = art.title;
+        title.title = art.title;   // browser tooltip for the full name
 
         card.appendChild(img);
         card.appendChild(title);
@@ -141,14 +139,16 @@ function renderGallery() {
 
 function openModal(idx) {
     if (idx < 0 || idx >= state.artworks.length) return;
-    state.index = idx;
-    const art = state.artworks[idx];
 
-    // reset transform before swap
+    state.index = idx;
     state.zoom = 1;
     state.tx = 0;
     state.ty = 0;
+    state.pinch = null;
+    state.dragging = false;
+    wheelAccum = 0;
 
+    const art = state.artworks[idx];
     modalImg.src = art.src;
     modalImg.alt = art.title;
     applyTransform();
@@ -157,11 +157,9 @@ function openModal(idx) {
     dimsEl.textContent = 'loading...';
 
     modal.classList.add('open');
-    zoomBar.classList.add('show');
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
 
-    // shareable link
     if (location.hash !== `#${idx}`) {
         history.replaceState(null, '', `#${idx}`);
     }
@@ -171,14 +169,12 @@ function openModal(idx) {
 
 function closeModal() {
     modal.classList.remove('open');
-    zoomBar.classList.remove('show');
     dimsEl.textContent = '';
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
     state.pinch = null;
     state.dragging = false;
 
-    // kill hash so back/forward behaves
     if (location.hash) {
         history.replaceState(null, '', location.pathname + location.search);
     }
@@ -187,17 +183,15 @@ function closeModal() {
 function navigate(dir) {
     if (!modal.classList.contains('open')) return;
     const n = state.artworks.length;
-    const idx = (state.index + dir + n) % n;
-    openModal(idx);
+    openModal((state.index + dir + n) % n);
 }
 
 function preloadNeighbors(idx) {
     const n = state.artworks.length;
     if (n < 2) return;
-    [-1, 1].forEach(offset => {
-        const i = (idx + offset + n) % n;
+    [-1, 1].forEach(off => {
         const im = new Image();
-        im.src = state.artworks[i].src;
+        im.src = state.artworks[(idx + off + n) % n].src;
     });
 }
 
@@ -207,6 +201,12 @@ function updateCounter() {
 
 // ---------------------------------------------------------------
 // zoom + pan
+//
+// pixel art rule: zoom is always an integer multiple of native
+// (1x, 2x, 3x ...) so every source pixel maps to an exact square
+// block of screen pixels. fractional zoom = uneven pixel sizes,
+// even with image-rendering: pixelated. so: wheel/buttons snap,
+// pinch is allowed to float during the gesture and snaps on release.
 // ---------------------------------------------------------------
 
 function applyTransform() {
@@ -215,12 +215,9 @@ function applyTransform() {
 }
 
 function updateZoomLabel() {
-    zoomVal.textContent = `${Math.round(state.zoom * 100)}%`;
+    zoomVal.textContent = `${Math.round(state.zoom)}×`;
 }
 
-// keep the image from being panned entirely off-screen.
-// if the scaled image is smaller than the viewport on an axis,
-// lock it to 0 on that axis.
 function clampPan() {
     if (!modalImg.naturalWidth || !modalImg.offsetWidth) return;
     const w = modalImg.offsetWidth * state.zoom;
@@ -231,28 +228,31 @@ function clampPan() {
     state.ty = Math.max(-maxTy, Math.min(maxTy, state.ty));
 }
 
-// set zoom while keeping (anchorX, anchorY) — viewport coords — fixed.
-// defaults to the viewport centre.
-function setZoom(newZoom, anchorX, anchorY) {
-    newZoom = Math.max(0.25, Math.min(8, newZoom));
+// internal: applies zoom without snapping (used by pinch)
+function applyZoom(newZoom, anchorX, anchorY) {
+    newZoom = Math.max(1, Math.min(8, newZoom));
     if (anchorX == null) {
         anchorX = window.innerWidth / 2;
         anchorY = window.innerHeight / 2;
     }
     const cx = anchorX - window.innerWidth / 2;
     const cy = anchorY - window.innerHeight / 2;
-
-    // image-space point that's currently under the anchor
     const ix = (cx - state.tx) / state.zoom;
     const iy = (cy - state.ty) / state.zoom;
 
     state.zoom = newZoom;
     state.tx = cx - ix * newZoom;
     state.ty = cy - iy * newZoom;
-
     clampPan();
     applyTransform();
     updateZoomLabel();
+}
+
+// public: snaps to nearest integer (used by buttons, wheel, reset)
+function setZoom(newZoom, anchorX, anchorY) {
+    const snapped = Math.max(1, Math.min(8, Math.round(newZoom)));
+    if (snapped === state.zoom) return;
+    applyZoom(snapped, anchorX, anchorY);
 }
 
 function resetZoom() {
@@ -264,7 +264,7 @@ function resetZoom() {
 }
 
 // ---------------------------------------------------------------
-// mouse drag
+// drag / pan
 // ---------------------------------------------------------------
 
 function startDrag(x, y) {
@@ -289,25 +289,37 @@ function stopDrag() {
 // events
 // ---------------------------------------------------------------
 
-// gallery click handlers already bound in renderGallery
-
 closeBtn.addEventListener('click', closeModal);
 prevBtn.addEventListener('click', () => navigate(-1));
 nextBtn.addEventListener('click', () => navigate(1));
-minusBtn.addEventListener('click', () => setZoom(state.zoom / 1.5));
-plusBtn.addEventListener('click', () => setZoom(state.zoom * 1.5));
+minusBtn.addEventListener('click', () => setZoom(state.zoom - 1));
+plusBtn.addEventListener('click', () => setZoom(state.zoom + 1));
 resetBtn.addEventListener('click', resetZoom);
 
-// click the dark area (not the image) to close
+if (randomBtn) {
+    randomBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!state.artworks.length) return;
+        openModal(Math.floor(Math.random() * state.artworks.length));
+    });
+}
+
+// click the dark area to close
 modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
 });
 
-// wheel zoom toward cursor
+// wheel zoom — accumulate so trackpads don't fly through all 8 levels
+// in one gesture. mouse wheel (deltaY ~100) triggers one step per notch.
+let wheelAccum = 0;
+
 modal.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
-    setZoom(state.zoom * factor, e.clientX, e.clientY);
+    wheelAccum += e.deltaY;
+    if (Math.abs(wheelAccum) >= 50) {
+        setZoom(state.zoom + (wheelAccum < 0 ? 1 : -1), e.clientX, e.clientY);
+        wheelAccum = 0;
+    }
 }, { passive: false });
 
 // mouse drag
@@ -320,14 +332,14 @@ window.addEventListener('mousemove', (e) => {
 });
 window.addEventListener('mouseup', stopDrag);
 
-// dblclick to toggle 1:1 / 1x
+// double-click toggles 1x / 2x
 modalImg.addEventListener('dblclick', (e) => {
     e.stopPropagation();
     if (state.zoom > 1) resetZoom();
     else setZoom(2, e.clientX, e.clientY);
 });
 
-// touch: one finger = pan, two = pinch zoom
+// touch — one finger pans, two fingers pinch
 modalImg.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
         e.preventDefault();
@@ -352,16 +364,16 @@ modalImg.addEventListener('touchmove', (e) => {
         const midX = (a.clientX + b.clientX) / 2;
         const midY = (a.clientY + b.clientY) / 2;
         const ratio = dist / state.pinch.startDist;
-        const newZoom = Math.max(0.25, Math.min(8, state.pinch.startZoom * ratio));
+        const rawZoom = Math.max(1, Math.min(8, state.pinch.startZoom * ratio));
 
         const cx = midX - window.innerWidth / 2;
         const cy = midY - window.innerHeight / 2;
         const ix = (cx - state.pinch.startTx) / state.pinch.startZoom;
         const iy = (cy - state.pinch.startTy) / state.pinch.startZoom;
 
-        state.zoom = newZoom;
-        state.tx = cx - ix * newZoom;
-        state.ty = cy - iy * newZoom;
+        state.zoom = rawZoom;
+        state.tx = cx - ix * rawZoom;
+        state.ty = cy - iy * rawZoom;
         clampPan();
         applyTransform();
         updateZoomLabel();
@@ -372,7 +384,11 @@ modalImg.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 modalImg.addEventListener('touchend', (e) => {
-    if (e.touches.length < 2) state.pinch = null;
+    if (state.pinch && e.touches.length < 2) {
+        // snap to nearest integer on release
+        applyZoom(Math.round(state.zoom), null, null);
+        state.pinch = null;
+    }
     if (e.touches.length === 0) stopDrag();
 });
 
@@ -382,13 +398,12 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape')     { closeModal(); return; }
     if (e.key === 'ArrowLeft')  { navigate(-1); return; }
     if (e.key === 'ArrowRight') { navigate(1);  return; }
-    if (e.key === '+' || e.key === '=') { setZoom(state.zoom * 1.5); return; }
-    if (e.key === '-')          { setZoom(state.zoom / 1.5); return; }
+    if (e.key === '+' || e.key === '=') { setZoom(state.zoom + 1); return; }
+    if (e.key === '-')          { setZoom(state.zoom - 1); return; }
     if (e.key === 'r' || e.key === 'R') { resetZoom(); return; }
 });
 
-// image load — update dimensions + re-clamp (in case user zoomed
-// while the image was still decoding)
+// image load — update dims, re-clamp (user might have zoomed mid-load)
 modalImg.addEventListener('load', () => {
     if (modalImg.naturalWidth && modalImg.naturalHeight) {
         dimsEl.textContent = `${modalImg.naturalWidth}×${modalImg.naturalHeight}`;
@@ -403,7 +418,7 @@ modalImg.addEventListener('error', () => {
     dimsEl.textContent = '?×?';
 });
 
-// hash routing — deep links open the right image
+// hash routing — #5 opens drawing 6, back button works
 function syncFromHash() {
     const m = location.hash.match(/^#(\d+)$/);
     if (m && state.artworks.length) {
@@ -428,7 +443,7 @@ window.addEventListener('hashchange', syncFromHash);
         syncFromHash();
     } catch (e) {
         console.error(e);
-        statusEl.textContent = `couldn't load drawings (${e.message}). check the repo config in app.js.`;
+        statusEl.textContent = `couldn't load drawings (${e.message}). check the repo config at the top of app.js.`;
         statusEl.classList.add('error');
     }
 })();
