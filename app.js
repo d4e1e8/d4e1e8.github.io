@@ -4,39 +4,38 @@ const REPO_NAME  = 'your-repo';
 const IMAGES_DIR = 'images';
 
 const CACHE_KEY = 'canv-artworks-v1';
-const CACHE_TTL = 60 * 60 * 1000;   // 1hr, then refetch from api
+const CACHE_TTL = 60 * 60 * 1000;   // 1hr
 const MAX_FILES = 1000;
 
 // state
 const state = {
     artworks: [],
     index: 0,
-    zoom: 1,       // always an integer 1-8 (fractional only mid-pinch)
+    zoom: 1,        // always integer 1-8 when at rest; fractional only mid-pinch
     tx: 0,
     ty: 0,
     dragging: false,
     dragStart: null,
     pinch: null,
 };
+let wheelAccum = 0;
 
 // dom
 const galleryEl = document.getElementById('gallery');
 const statusEl  = document.getElementById('status');
 const dateSpan  = document.getElementById('date');
 const countSpan = document.getElementById('count');
-const randomBtn = document.getElementById('randomBtn');
 const modal     = document.getElementById('art-modal');
 const modalImg  = document.getElementById('modal-img');
+const modalTitle = document.getElementById('modalTitle');
+const modalDims  = document.getElementById('modalDims');
 const closeBtn  = document.getElementById('closeModalBtn');
 const prevBtn   = document.getElementById('prevBtn');
 const nextBtn   = document.getElementById('nextBtn');
-const zoomBar   = document.getElementById('zoomBar');
 const minusBtn  = document.getElementById('minusBtn');
 const plusBtn   = document.getElementById('plusBtn');
-const resetBtn  = document.getElementById('resetBtn');
-const zoomVal   = document.getElementById('zoomVal');
+const resetBtn  = document.getElementById('zoomVal');   // the [1×] button doubles as display + reset
 const counterEl = document.getElementById('counter');
-const dimsEl    = document.getElementById('dims');
 
 // date stamp
 if (dateSpan) {
@@ -45,9 +44,8 @@ if (dateSpan) {
 }
 
 // ---------------------------------------------------------------
-// fetching the file list from github
-// one request gives us the whole directory. cached so we don't
-// burn the 60/hr unauthenticated rate limit on every page view.
+// fetch file list from github. one request = whole directory.
+// cached so we don't burn the 60/hr unauthenticated rate limit.
 // ---------------------------------------------------------------
 
 function readCache(ignoreAge = false) {
@@ -58,15 +56,13 @@ function readCache(ignoreAge = false) {
         if (!Array.isArray(items)) return null;
         if (!ignoreAge && Date.now() - time > CACHE_TTL) return null;
         return { time, items };
-    } catch (e) {
-        return null;
-    }
+    } catch (e) { return null; }
 }
 
 function writeCache(items) {
     try {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), items }));
-    } catch (e) { /* quota, whatever */ }
+    } catch (e) {}
 }
 
 async function fetchArtworks() {
@@ -122,7 +118,7 @@ function renderGallery() {
         const title = document.createElement('h2');
         title.className = 'art-title';
         title.textContent = art.title;
-        title.title = art.title;   // browser tooltip for the full name
+        title.title = art.title;
 
         card.appendChild(img);
         card.appendChild(title);
@@ -130,7 +126,7 @@ function renderGallery() {
     });
 
     galleryEl.appendChild(frag);
-    countSpan.textContent = `${state.artworks.length} drawings`;
+    if (countSpan) countSpan.textContent = `${state.artworks.length} drawings`;
 }
 
 // ---------------------------------------------------------------
@@ -151,10 +147,11 @@ function openModal(idx) {
     const art = state.artworks[idx];
     modalImg.src = art.src;
     modalImg.alt = art.title;
+    modalTitle.textContent = art.title;
+    modalDims.textContent = '...';
     applyTransform();
     updateZoomLabel();
     updateCounter();
-    dimsEl.textContent = 'loading...';
 
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -169,12 +166,10 @@ function openModal(idx) {
 
 function closeModal() {
     modal.classList.remove('open');
-    dimsEl.textContent = '';
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
     state.pinch = null;
     state.dragging = false;
-
     if (location.hash) {
         history.replaceState(null, '', location.pathname + location.search);
     }
@@ -202,11 +197,10 @@ function updateCounter() {
 // ---------------------------------------------------------------
 // zoom + pan
 //
-// pixel art rule: zoom is always an integer multiple of native
-// (1x, 2x, 3x ...) so every source pixel maps to an exact square
-// block of screen pixels. fractional zoom = uneven pixel sizes,
-// even with image-rendering: pixelated. so: wheel/buttons snap,
-// pinch is allowed to float during the gesture and snaps on release.
+// pixel art rule: at rest, zoom is always an integer multiple of
+// native so every source pixel maps to an exact square block of
+// screen pixels. wheel & buttons snap. pinch floats during the
+// gesture, snaps on release.
 // ---------------------------------------------------------------
 
 function applyTransform() {
@@ -215,15 +209,24 @@ function applyTransform() {
 }
 
 function updateZoomLabel() {
-    zoomVal.textContent = `${Math.round(state.zoom)}×`;
+    resetBtn.textContent = `[${Math.round(state.zoom)}×]`;
 }
 
+// pan bounds: allow real movement at every zoom level.
+// if image overflows the viewport on an axis, let user pan to see
+// the edges (plus ~100px overshoot). if it fits, let them drag it
+// up to a full image-width in any direction — half the image can
+// go off-screen, but never all of it.
 function clampPan() {
     if (!modalImg.naturalWidth || !modalImg.offsetWidth) return;
     const w = modalImg.offsetWidth * state.zoom;
     const h = modalImg.offsetHeight * state.zoom;
-    const maxTx = Math.max(0, (w - window.innerWidth) / 2);
-    const maxTy = Math.max(0, (h - window.innerHeight) / 2);
+
+    const fitX = Math.max(0, (w - window.innerWidth) / 2);
+    const fitY = Math.max(0, (h - window.innerHeight) / 2);
+    const maxTx = fitX > 0 ? fitX + 100 : w;
+    const maxTy = fitY > 0 ? fitY + 100 : h;
+
     state.tx = Math.max(-maxTx, Math.min(maxTx, state.tx));
     state.ty = Math.max(-maxTy, Math.min(maxTy, state.ty));
 }
@@ -248,7 +251,7 @@ function applyZoom(newZoom, anchorX, anchorY) {
     updateZoomLabel();
 }
 
-// public: snaps to nearest integer (used by buttons, wheel, reset)
+// public: snap to nearest integer (buttons, wheel)
 function setZoom(newZoom, anchorX, anchorY) {
     const snapped = Math.max(1, Math.min(8, Math.round(newZoom)));
     if (snapped === state.zoom) return;
@@ -264,7 +267,7 @@ function resetZoom() {
 }
 
 // ---------------------------------------------------------------
-// drag / pan
+// drag
 // ---------------------------------------------------------------
 
 function startDrag(x, y) {
@@ -296,23 +299,12 @@ minusBtn.addEventListener('click', () => setZoom(state.zoom - 1));
 plusBtn.addEventListener('click', () => setZoom(state.zoom + 1));
 resetBtn.addEventListener('click', resetZoom);
 
-if (randomBtn) {
-    randomBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (!state.artworks.length) return;
-        openModal(Math.floor(Math.random() * state.artworks.length));
-    });
-}
-
-// click the dark area to close
+// click the dark backdrop to close
 modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
 });
 
-// wheel zoom — accumulate so trackpads don't fly through all 8 levels
-// in one gesture. mouse wheel (deltaY ~100) triggers one step per notch.
-let wheelAccum = 0;
-
+// wheel zoom — accumulate so trackpads don't fly across all 8 levels
 modal.addEventListener('wheel', (e) => {
     e.preventDefault();
     wheelAccum += e.deltaY;
@@ -332,14 +324,14 @@ window.addEventListener('mousemove', (e) => {
 });
 window.addEventListener('mouseup', stopDrag);
 
-// double-click toggles 1x / 2x
+// dblclick toggles 1x / 2x
 modalImg.addEventListener('dblclick', (e) => {
     e.stopPropagation();
     if (state.zoom > 1) resetZoom();
     else setZoom(2, e.clientX, e.clientY);
 });
 
-// touch — one finger pans, two fingers pinch
+// touch: one finger pan, two finger pinch
 modalImg.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
         e.preventDefault();
@@ -385,7 +377,6 @@ modalImg.addEventListener('touchmove', (e) => {
 
 modalImg.addEventListener('touchend', (e) => {
     if (state.pinch && e.touches.length < 2) {
-        // snap to nearest integer on release
         applyZoom(Math.round(state.zoom), null, null);
         state.pinch = null;
     }
@@ -403,22 +394,22 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'r' || e.key === 'R') { resetZoom(); return; }
 });
 
-// image load — update dims, re-clamp (user might have zoomed mid-load)
+// image load — dims + re-clamp (user might have zoomed mid-load)
 modalImg.addEventListener('load', () => {
     if (modalImg.naturalWidth && modalImg.naturalHeight) {
-        dimsEl.textContent = `${modalImg.naturalWidth}×${modalImg.naturalHeight}`;
+        modalDims.textContent = `${modalImg.naturalWidth}×${modalImg.naturalHeight}`;
     } else {
-        dimsEl.textContent = '';
+        modalDims.textContent = '';
     }
     clampPan();
     applyTransform();
 });
 
 modalImg.addEventListener('error', () => {
-    dimsEl.textContent = '?×?';
+    modalDims.textContent = '?×?';
 });
 
-// hash routing — #5 opens drawing 6, back button works
+// hash routing
 function syncFromHash() {
     const m = location.hash.match(/^#(\d+)$/);
     if (m && state.artworks.length) {

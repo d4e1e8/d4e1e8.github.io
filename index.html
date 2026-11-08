@@ -1,39 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>canv — drawings</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <header>
-    <h1>canv</h1>
-    <p class="sub-title">
-      updated: <span id="date"></span> · <span id="count"></span> ·
-      <a href="#" id="randomBtn" class="random-btn">[random]</a>
-    </p>
-  </header>
-
-  <main class="gallery" id="gallery">
-    <p class="status" id="status">loading...</p>
-  </main>
-
-  <div id="art-modal" class="modal" role="dialog" aria-modal="true">
-    <span class="close-modal" id="closeModalBtn">[x]</span>
-    <img class="modal-content" id="modal-img" alt="">
-    <div class="modal-nav modal-prev" id="prevBtn" title="previous (←)">‹</div>
-    <div class="modal-nav modal-next" id="nextBtn" title="next (→)">›</div>
-    <div class="zoom-control-bar" id="zoomBar">
-      <span class="counter" id="counter"></span>
-      <button class="zoom-btn" id="minusBtn">[-]</button>
-      <span class="zoom-value" id="zoomVal">100%</span>
-      <button class="zoom-btn" id="plusBtn">[+]</button>
-      <button class="zoom-btn" id="resetBtn" title="reset (r)">[1:1]</button>
+<div id="art-modal" class="modal" role="dialog" aria-modal="true">
+  <div class="modal-top">
+    <div class="modal-info">
+      <span class="modal-title" id="modalTitle"></span>
+      <span class="modal-dims" id="modalDims"></span>
     </div>
-    <div class="dimensions-display" id="dims"></div>
+    <button class="modal-close" id="closeModalBtn" title="close (esc)">[×]</button>
   </div>
 
-  <script src="app.js"></script>
-</body>
-</html>
+  <img class="modal-content" id="modal-img" alt="">
+
+  <div class="modal-nav modal-prev" id="prevBtn" title="prev (←)">‹</div>
+  <div class="modal-nav modal-next" id="nextBtn" title="next (→)">›</div>
+
+  <div class="modal-bottom" id="zoomBar">
+    <span class="counter" id="counter">[0/0]</span>
+    <span class="divider">·</span>
+    <button class="zoom-btn" id="minusBtn" title="zoom out (−)">[−]</button>
+    <button class="zoom-btn zoom-reset" id="zoomVal" title="reset (r)">[1×]</button>
+    <button class="zoom-btn" id="plusBtn" title="zoom in (+)">[+]</button>
+  </div>
+</div>
