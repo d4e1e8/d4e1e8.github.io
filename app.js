@@ -1,6 +1,6 @@
 // change these two to match your repo
-const REPO_OWNER = 'your-username';
-const REPO_NAME  = 'your-repo';
+const REPO_OWNER = 'd4e1e8';
+const REPO_NAME  = 'd4e1e8.github.io';
 const IMAGES_DIR = 'images';
 
 const CACHE_KEY = 'canv-artworks-v1';
